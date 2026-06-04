@@ -1,0 +1,8 @@
+"""Constants for VERSE MCP Server."""
+
+CHAR_LIMIT = 8_000
+EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_DIMENSIONS = 1536
+VECTOR_COLLECTION_NAME = "sc_chunks"
+REDIS_TTL_SECONDS = 60 * 60 * 24 * 30  # 30 days
+QDRANT_TIMEOUT = 10.0
