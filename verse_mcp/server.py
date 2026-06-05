@@ -34,4 +34,6 @@ if __name__ == "__main__":
     print(f"Transport: {transport}, Port: {port}", flush=True)
     mcp.settings.host = "0.0.0.0"
     mcp.settings.port = port
+    mcp.settings.transport_security.allowed_hosts.append("verse-mcp.aperture-agency.org:*")
+    mcp.settings.transport_security.allowed_origins.append("https://verse-mcp.aperture-agency.org")
     mcp.run(transport=transport)
