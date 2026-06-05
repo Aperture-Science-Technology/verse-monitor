@@ -32,4 +32,4 @@ if __name__ == "__main__":
     transport = os.getenv("TRANSPORT", "stdio")
     port = os.getenv("PORT", "8000")
     print(f"Transport: {transport}, Port: {port}", flush=True)
-    mcp.run(transport=transport)
+    mcp.run(transport=transport, host="0.0.0.0", port=int(port))
