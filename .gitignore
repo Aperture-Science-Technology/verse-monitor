@@ -53,3 +53,8 @@ htmlcov/
 *.log
 *.bak
 *.backup
+
+# AI / agent instructions (not for public repo)
+CLAUDE.md
+.cursorrules
+AGENTS.md
