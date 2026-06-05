@@ -6,7 +6,7 @@ from verse_mcp.services.rag import run_rag_pipeline
 import asyncio
 
 async def sc_get_guide(guide_title: str, player_level: str = "beginner") -> GuideOutput:
-    """Procédure step-by-step, paramètre `player_level` (beginner/intermediate/advanced)"""
+    """Step-by-step guide, `player_level` parameter (beginner/intermediate/advanced)"""
     question = f"Provide a step-by-step guide for {guide_title} suitable for {player_level} players."
     rag_result = await run_rag_pipeline(question=question, top_k=10)
     
@@ -24,7 +24,7 @@ async def sc_get_guide(guide_title: str, player_level: str = "beginner") -> Guid
     )
 
 async def sc_search_lore(query: str, top_k: int = 5) -> SearchLoreOutput:
-    """Lore/univers depuis Galactapedia + Comm-Links, retourne `related_topics`"""
+    """Lore/universe from Galactapedia + Comm-Links, returns `related_topics`"""
     rag_result = await run_rag_pipeline(question=query, top_k=top_k)
     
     results = []

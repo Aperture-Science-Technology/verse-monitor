@@ -6,7 +6,7 @@ from verse_mcp.services.rag import run_rag_pipeline
 import asyncio
 
 async def sc_get_ship_stats(ship_name: str) -> ShipStatsOutput:
-    """Stats techniques complètes d'un vaisseau (Qdrant → fallback Wiki API)"""
+    """Full technical ship stats (Qdrant → fallback Wiki API)"""
     # First try to get from Qdrant via RAG pipeline for a specific question
     question = f"What are the technical specifications and statistics for the {ship_name}?"
     rag_result = await run_rag_pipeline(question=question, top_k=10)
@@ -35,7 +35,7 @@ async def sc_get_ship_stats(ship_name: str) -> ShipStatsOutput:
     )
 
 async def sc_compare_ships(ship_a: str, ship_b: str) -> CompareShipsOutput:
-    """Comparaison deux vaisseaux — fetch **en parallèle** via `asyncio.gather`"""
+    """Compare two ships — fetch **in parallel** via `asyncio.gather`"""
     # Fetch both ships in parallel
     ship_a_task = sc_get_ship_stats(ship_a)
     ship_b_task = sc_get_ship_stats(ship_b)

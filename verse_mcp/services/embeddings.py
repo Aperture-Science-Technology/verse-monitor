@@ -7,7 +7,7 @@ from verse_mcp.constants import EMBEDDING_MODEL, EMBEDDING_DIMENSIONS
 
 async def generate_embedding(text: str) -> list[float]:
     """Generate embedding using OpenRouter (or OpenAI fallback)."""
-    # Priorité à la clé OpenRouter, puis à OPENAI_API_KEY
+    # Prefer OpenRouter key, fall back to OPENAI_API_KEY
     api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError(

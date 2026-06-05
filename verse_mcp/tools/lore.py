@@ -5,7 +5,7 @@ from verse_mcp.models.outputs import SearchLoreOutput
 from verse_mcp.services.rag import run_rag_pipeline
 
 async def sc_search_lore(query: str, top_k: int = 5) -> SearchLoreOutput:
-    """Lore/univers depuis Galactapedia + Comm-Links, retourne `related_topics`"""
+    """Lore/universe from Galactapedia + Comm-Links, returns `related_topics`"""
     rag_result = await run_rag_pipeline(question=query, top_k=top_k)
     
     # Convert sources to LoreResult

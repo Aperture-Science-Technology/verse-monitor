@@ -46,7 +46,7 @@ User Question
 | `sc_ask` | General question answering — full RAG pipeline |
 | `sc_get_ship_stats` | Retrieve detailed ship specifications |
 | `sc_get_guide` | Search community guides and tutorials |
-| `sc_get_lore` | Query Star Citizen lore and galactapedia |
+| `sc_search_lore` | Query Star Citizen lore and galactapedia |
 
 ## Tech Stack
 
@@ -56,7 +56,7 @@ User Question
 - **Embeddings:** OpenRouter (`text-embedding-3-small`, 1536 dimensions)
 - **LLM:** Claude (via Anthropic API)
 - **Deployment:** Docker Compose, Traefik, Let's Encrypt
-- **Source ingestion:** Star Citizen Wiki API v2
+- **Source ingestion:** Star Citizen Wiki API (MediaWiki)
 
 ## Deployment
 

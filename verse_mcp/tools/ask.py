@@ -10,7 +10,7 @@ async def sc_ask(
     system_prompt: str = "",
     top_k: int = 5,
 ) -> RagResult:
-    """Question générale — pipeline RAG complet, détection auto du type de réponse."""
+    """General question — full RAG pipeline, auto-detect answer type."""
     return await run_rag_pipeline(
         question=question,
         category=category,

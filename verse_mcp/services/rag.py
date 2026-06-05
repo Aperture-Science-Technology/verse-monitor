@@ -15,27 +15,27 @@ async def run_rag_pipeline(
     top_k: int = 5,
 ) -> RagResult:
     """Run the full RAG pipeline: cache -> embedding -> search -> LLM."""
-    # 1. Cache Redis — évite l'appel OpenAI sur questions répétées (~65% des cas)
+    # 1. Redis cache — avoids OpenAI call on repeated questions (~65% of cases)
     embedding = await get_cached_embedding(question)
     if embedding is None:
         embedding = await generate_embedding(question)
-        await set_cached_embedding(question, embedding)  # TTL 30 jours
+        await set_cached_embedding(question, embedding)  # TTL 30 days
 
-    # 2. Recherche Qdrant (~3ms avec index payload)
+    # 2. Qdrant search (~3ms with payload index)
     chunks = await search_chunks(embedding, top_k=top_k, category=category)
 
-    # 3. Assemblage contexte RAG
+    # 3. Assemble RAG context
     context = "\n\n---\n\n".join(
         f"[Source: {c.source} | URL: {c.url}]\n{c.content}"
         for c in chunks
     )
 
-    # 4. Appel Claude
+    # 4. Claude call
     prompt = f"{system_prompt}\n\nCONTEXT:\n{context}\n\nQUESTION: {question}"
     answer = await call_claude(prompt)
 
     if len(answer) > CHAR_LIMIT:
-        answer = answer[:CHAR_LIMIT] + "\n\n[Réponse tronquée — affiner la question.]"
+        answer = answer[:CHAR_LIMIT] + "\n\n[Answer truncated — refine the question.]"
 
     return RagResult(
         answer=answer,
