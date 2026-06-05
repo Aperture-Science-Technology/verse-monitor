@@ -30,6 +30,8 @@ if __name__ == "__main__":
     import os
     print("Starting VERSE MCP server...", flush=True)
     transport = os.getenv("TRANSPORT", "stdio")
-    port = os.getenv("PORT", "8000")
+    port = int(os.getenv("PORT", "8000"))
     print(f"Transport: {transport}, Port: {port}", flush=True)
-    mcp.run(transport=transport, host="0.0.0.0", port=int(port))
+    mcp.settings.host = "0.0.0.0"
+    mcp.settings.port = port
+    mcp.run(transport=transport)
