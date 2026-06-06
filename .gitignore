@@ -58,3 +58,7 @@ htmlcov/
 CLAUDE.md
 .cursorrules
 AGENTS.md
+
+# Claude Code local settings (personal overrides)
+.claude/settings.local.json
+.claude/CLAUDE.local.md
