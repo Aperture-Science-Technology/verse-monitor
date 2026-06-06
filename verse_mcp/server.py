@@ -1,6 +1,6 @@
 """VERSE MCP Server — Star Citizen Q&A via RAG."""
 
-import os
+import os, traceback, sys
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
@@ -25,7 +25,7 @@ mcp = FastMCP("verse_mcp", lifespan=lifespan)
 # Import after init to avoid circular imports
 from verse_mcp.tools import ask, ships, guide, lore  # noqa
 
-# Register tools
+# Register tools — direct, no wrapper
 mcp.add_tool(ask.sc_ask, name="sc_ask", description=ask.sc_ask.__doc__)
 mcp.add_tool(ships.sc_get_ship_stats, name="sc_get_ship_stats", description=ships.sc_get_ship_stats.__doc__)
 mcp.add_tool(guide.sc_get_guide, name="sc_get_guide", description=guide.sc_get_guide.__doc__)

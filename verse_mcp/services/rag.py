@@ -15,13 +15,13 @@ async def run_rag_pipeline(
     top_k: int = 5,
 ) -> RagResult:
     """Run the full RAG pipeline: cache -> embedding -> search -> LLM."""
-    # 1. Redis cache — avoids OpenAI call on repeated questions (~65% of cases)
+    # 1. Redis cache
     embedding = await get_cached_embedding(question)
     if embedding is None:
         embedding = await generate_embedding(question)
-        await set_cached_embedding(question, embedding)  # TTL 30 days
+        await set_cached_embedding(question, embedding)
 
-    # 2. Qdrant search (~3ms with payload index)
+    # 2. Qdrant search
     chunks = await search_chunks(embedding, top_k=top_k, category=category)
 
     # 3. Assemble RAG context
