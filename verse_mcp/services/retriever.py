@@ -1,9 +1,18 @@
 """Retriever service (Qdrant)."""
 
 import os
+from dataclasses import dataclass
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from verse_mcp.constants import VECTOR_COLLECTION_NAME, QDRANT_TIMEOUT
+
+
+@dataclass
+class Chunk:
+    content: str
+    source: str
+    url: str
+    patch_version: str | None = None
 
 _qdrant_client: QdrantClient | None = None
 
@@ -49,26 +58,16 @@ async def search_chunks(
             must=[models.FieldCondition(key="category", match=models.MatchValue(value=category))]
         )
     
-    results = _qdrant_client.search(
+    response = _qdrant_client.query_points(
         collection_name=VECTOR_COLLECTION_NAME,
-        query_vector=embedding,
+        query=embedding,
         limit=top_k,
         query_filter=query_filter,
         with_payload=True,
     )
-    
-    # Convert to list of simple objects (or dataclasses) for consistency
-    from dataclasses import dataclass
-    
-    @dataclass
-    class Chunk:
-        content: str
-        source: str
-        url: str
-        patch_version: str | None = None
-    
+
     chunks = []
-    for point in results:
+    for point in response.points:
         payload = point.payload
         chunks.append(
             Chunk(
