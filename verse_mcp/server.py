@@ -8,6 +8,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 from verse_mcp.services.cache import init_redis, close_redis
 from verse_mcp.services.retriever import init_qdrant, close_qdrant
+from verse_mcp.services.llm import init_anthropic
 
 
 @asynccontextmanager
@@ -15,6 +16,7 @@ async def lifespan(app):
     """Connections initialized once at startup — never inside tools."""
     await init_redis()
     await init_qdrant()
+    init_anthropic()
     yield
     await close_redis()
     await close_qdrant()
@@ -23,13 +25,13 @@ async def lifespan(app):
 mcp = FastMCP("verse_mcp", lifespan=lifespan)
 
 # Import after init to avoid circular imports
-from verse_mcp.tools import ask, ships, guide, lore  # noqa
+from verse_mcp.tools import ask, ships, guide  # noqa
 
 # Register tools — direct, no wrapper
 mcp.add_tool(ask.sc_ask, name="sc_ask", description=ask.sc_ask.__doc__)
 mcp.add_tool(ships.sc_get_ship_stats, name="sc_get_ship_stats", description=ships.sc_get_ship_stats.__doc__)
 mcp.add_tool(guide.sc_get_guide, name="sc_get_guide", description=guide.sc_get_guide.__doc__)
-mcp.add_tool(lore.sc_search_lore, name="sc_search_lore", description=lore.sc_search_lore.__doc__)
+mcp.add_tool(guide.sc_search_lore, name="sc_search_lore", description=guide.sc_search_lore.__doc__)
 
 if __name__ == "__main__":
     transport = os.getenv("TRANSPORT", "stdio")
