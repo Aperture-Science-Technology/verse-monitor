@@ -1,13 +1,13 @@
 """Main ingestion orchestrator."""
 
 import asyncio
-from .wiki_ingest import run_full_ingestion
+from .wiki_ingest import run_ingestion
 
 
 async def main():
     """Run all ingestion processes."""
     print("Starting VERSE data ingestion (API v2)...")
-    await run_full_ingestion()
+    await run_ingestion()
     print("Ingestion completed.")
 
 

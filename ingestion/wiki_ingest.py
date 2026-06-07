@@ -52,6 +52,8 @@ QDRANT_API_KEY = _env("QDRANT_API_KEY", "")
 
 # Pagination
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
+API_TIMEOUT = 60.0     # seconds (API can be slow)
+MAX_PAGES = 5          # max pages per source (to avoid extremely long runs)
 
 # Rate limiting
 RATE_LIMIT_DELAY = 0.2  # seconds between API calls
@@ -118,17 +120,17 @@ async def api_get(path: str, params: dict | None = None) -> dict:
     assert api_client is not None
     url = f"{API_BASE}{path}"
     headers = {"Accept": "application/json"}
-    resp = await api_client.get(url, params=params or {}, headers=headers, timeout=30)
+    resp = await api_client.get(url, params=params or {}, headers=headers, timeout=API_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
 
-async def fetch_all_pages(endpoint: str) -> list[dict]:
-    """Fetch all items from a paginated API endpoint."""
+async def fetch_all_pages(endpoint: str, max_pages: int = MAX_PAGES) -> list[dict]:
+    """Fetch items from a paginated API endpoint, up to max_pages."""
     all_items = []
     page = 1
 
-    while True:
+    while page <= max_pages:
         data = await api_get(endpoint, params={"limit": API_PAGE_LIMIT, "page": page})
         items = data.get("data", [])
         if not items:
@@ -393,7 +395,6 @@ def init_qdrant():
 
     qdrant_client = QdrantClient(
         url=QDRANT_URL,
-        api_key=QDRANT_API_KEY or None,
         timeout=QDRANT_TIMEOUT,
     )
 
@@ -448,18 +449,8 @@ async def upsert_chunks(chunks: list[str], source: str, url: str, category: str)
 async def process_item(item: dict, category: str, endpoint: str) -> int:
     """Process a single API item: extract text, chunk, embed, store."""
     try:
-        # For galactapedia and comm-links, we need to fetch the full item
-        # because the list endpoint doesn't include translations
-        if "galactapedia" in endpoint or "comm-links" in endpoint:
-            api_url = item.get("api_url", "")
-            if api_url:
-                try:
-                    item = await fetch_item_detail(api_url)
-                    await asyncio.sleep(RATE_LIMIT_DELAY)
-                except Exception:
-                    pass  # Use the list data as fallback
-
-        # Extract text
+        # Extract text directly from the list data (no individual API calls)
+        # Galactapedia and comm-links already include translations in list responses
         extractor = get_content_extractor(endpoint)
         text = extractor(item)
 
