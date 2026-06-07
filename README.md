@@ -15,13 +15,12 @@ User Question
      │
      ▼
 ┌─────────────────────────────────────────────┐
-│  VERSE MCP Server (Python / FastMCP)        │
+│  VERSE MCP Server (Python / FastMCP 3.4)    │
 │                                             │
 │  1. Redis Cache check (avoid re-embedding)  │
 │  2. OpenRouter embedding (text-embedding-3) │
 │  3. Qdrant vector search (cosine similarity)│
-│  4. Claude LLM synthesis                    │
-│  5. Sourced answer with citations           │
+│  4. Return raw context chunks + sources     │
 └─────────────────────────────────────────────┘
      │                    │                    │
      ▼                    ▼                    ▼
@@ -30,6 +29,8 @@ User Question
 │  (cache) │      │ (vectors DB) │     │ (embeddings)│
 └──────────┘      └──────────────┘     └──────────┘
 ```
+
+**Note:** The server does NOT perform LLM synthesis. It returns raw context chunks to the MCP client, which uses its own LLM to generate the final answer. This reduces server complexity and ensures the client always uses its preferred model.
 
 ## Features
 
@@ -50,12 +51,12 @@ User Question
 
 ## Tech Stack
 
-- **Runtime:** Python 3.12, FastMCP, asyncio
-- **Vector DB:** Qdrant
+- **Runtime:** Python 3.12, FastMCP 3.4 (standalone), asyncio
+- **Vector DB:** Qdrant (with API key auth)
 - **Cache:** Redis
 - **Embeddings:** OpenRouter (`text-embedding-3-small`, 1536 dimensions)
-- **LLM:** Claude (via Anthropic API)
-- **Deployment:** Docker Compose, Traefik, Let's Encrypt
+- **Transport:** Streamable HTTP (stateless) via FastMCP
+- **Deployment:** Docker Compose, Traefik, Let's Encrypt (Cloudflare DNS challenge)
 - **Source ingestion:** Star Citizen Wiki API (MediaWiki)
 
 ## Deployment
@@ -74,6 +75,8 @@ docker compose up -d --build
 - [x] Core MCP server with RAG pipeline
 - [x] Star Citizen Wiki API ingestion
 - [x] Docker deployment with Traefik
+- [x] Migrate to FastMCP 3.4 standalone (stateless HTTP)
+- [x] Qdrant API key authentication
 - [ ] Community forum crawling (Spectrum, RSI forums)
 - [ ] Lightpanda headless browser integration
 - [ ] Incremental/delta re-indexing
