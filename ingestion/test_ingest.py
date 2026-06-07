@@ -1,12 +1,13 @@
 """Quick test: fetch one ship, embed it, store in Qdrant."""
+
 import asyncio
 import sys
 import time
+
+sys.path.insert(0, "/home/glados/projects/verse-mcp")
+
 import httpx
 import redis.asyncio as redis_lib
-
-# Ensure project root is on path
-sys.path.insert(0, "/home/glados/projects/verse-mcp")
 
 from ingestion.wiki_ingest import (
     init_qdrant,
@@ -16,8 +17,7 @@ from ingestion.wiki_ingest import (
     embedding_client,
     redis_client,
     stats,
-    QDRANT_URL,
-    REDIS_URL,
+    _env,
 )
 
 
@@ -30,7 +30,7 @@ async def test():
     wi.embedding_client = httpx.AsyncClient()
     wi.redis_client = None
     try:
-        r = redis_lib.from_url(REDIS_URL, decode_responses=True)
+        r = redis_lib.from_url(_env("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
         await r.ping()
         wi.redis_client = r
         print("Redis: OK")

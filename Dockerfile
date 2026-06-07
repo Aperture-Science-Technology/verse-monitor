@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY verse_mcp/ verse_mcp/
+COPY ingestion/ ingestion/
 
 # Non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
@@ -20,6 +21,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
 
-# FastMCP stateless HTTP mode
+# Python path
+ENV PYTHONPATH=/app
 ENV PORT=8000
+
 CMD ["python3", "-m", "verse_mcp.server"]

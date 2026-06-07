@@ -1,14 +1,14 @@
 """Quick test: ingest 3 ships from Star Citizen Wiki."""
+
 import asyncio
-import os
 import sys
 import time
 
 sys.path.insert(0, "/app")
 
-# Override config for test
 import ingestion.wiki_ingest as wi
 
+# Override config for test
 wi.CATEGORIES = [
     ("Category:Ships", "ships"),
 ]
@@ -27,7 +27,7 @@ async def main():
     wi.embedding_client = httpx.AsyncClient()
 
     try:
-        r = redis_lib.from_url(wi.REDIS_URL, decode_responses=True)
+        r = redis_lib.from_url(wi._env("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
         await r.ping()
         wi.redis_client = r
         print("Redis: OK")
@@ -38,7 +38,7 @@ async def main():
     wi.init_qdrant()
     print(f"Qdrant: OK")
     print(f"Embeddings: {wi.EMBEDDING_MODEL} via {wi.EMBEDDING_BASE_URL}")
-    print(f"API key present: {bool(wi.OPENROUTER_API_KEY)}")
+    print(f"API key present: {bool(wi._env('OPENROUTER_API_KEY', ''))}")
 
     # Fetch only 3 ships
     titles = await wi.fetch_category_members("Category:Ships", limit=3)
@@ -69,7 +69,7 @@ async def main():
     print(f"Cost estimate:  ~${cost:.4f}")
 
     # Verify in Qdrant
-    count = wi.qdrant_client.count(collection_name=wi.COLLECTION_NAME)
+    count = wi.qdrant_client.count(collection_name=wi.VECTOR_COLLECTION_NAME)
     print(f"Qdrant points:  {count.count}")
 
     await wi.wiki_client.aclose()
