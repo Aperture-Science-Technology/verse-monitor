@@ -1,4 +1,4 @@
-"""Quick test: ingest 3 ships from Star Citizen Wiki."""
+"""Quick test: ingest 3 vehicles from Star Citizen Wiki API v2."""
 
 import asyncio
 import sys
@@ -8,14 +8,6 @@ sys.path.insert(0, "/app")
 
 import ingestion.wiki_ingest as wi
 
-# Override config for test
-wi.CATEGORIES = [
-    ("Category:Ships", "ships"),
-]
-wi.CHUNK_SIZE = 500
-wi.CHUNK_OVERLAP = 100
-wi.RATE_LIMIT_DELAY = 0.5
-
 
 async def main():
     wi.stats["start_time"] = time.time()
@@ -23,11 +15,11 @@ async def main():
     import httpx
     import redis.asyncio as redis_lib
 
-    wi.wiki_client = httpx.AsyncClient(follow_redirects=True)
+    wi.api_client = httpx.AsyncClient(headers={"Accept": "application/json"})
     wi.embedding_client = httpx.AsyncClient()
 
     try:
-        r = redis_lib.from_url(wi._env("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
+        r = redis_lib.from_url(wi.REDIS_URL, decode_responses=True)
         await r.ping()
         wi.redis_client = r
         print("Redis: OK")
@@ -37,18 +29,23 @@ async def main():
 
     wi.init_qdrant()
     print(f"Qdrant: OK")
+    print(f"API: {wi.API_BASE}")
     print(f"Embeddings: {wi.EMBEDDING_MODEL} via {wi.EMBEDDING_BASE_URL}")
-    print(f"API key present: {bool(wi._env('OPENROUTER_API_KEY', ''))}")
+    print(f"API key present: {bool(wi.OPENROUTER_API_KEY)}")
 
-    # Fetch only 3 ships
-    titles = await wi.fetch_category_members("Category:Ships", limit=3)
-    print(f"\nShips: {titles}")
+    # Fetch only 3 vehicles for test
+    old_limit = wi.API_PAGE_LIMIT
+    wi.API_PAGE_LIMIT = 3
+    vehicles = await wi.fetch_all_pages("/vehicles")
+    wi.API_PAGE_LIMIT = old_limit
+    print(f"\nVehicles found: {len(vehicles)}")
 
-    for i, title in enumerate(titles):
-        chunks = await wi.process_page(title, "ships")
+    for i, vehicle in enumerate(vehicles):
+        name = vehicle.get("name", "Unknown")
+        n = await wi.process_item(vehicle, "ships", "/vehicles")
         elapsed = time.time() - wi.stats["start_time"]
         print(
-            f"[{i+1}/{len(titles)}] {title}: {chunks} chunks | "
+            f"[{i+1}/{len(vehicles)}] {name}: {n} chunks | "
             f"Total: {wi.stats['chunks_created']} chunks, "
             f"{wi.stats['embeddings_generated']} emb, "
             f"{wi.stats['embeddings_cached']} cached | "
@@ -59,7 +56,7 @@ async def main():
     elapsed = time.time() - wi.stats["start_time"]
     print(f"\n{'='*50}")
     print(f"TEST COMPLETE")
-    print(f"Pages fetched:  {wi.stats['pages_fetched']}")
+    print(f"Items fetched:  {wi.stats['items_fetched']}")
     print(f"Chunks created: {wi.stats['chunks_created']}")
     print(f"Embeddings API: {wi.stats['embeddings_generated']}")
     print(f"Embeddings cache: {wi.stats['embeddings_cached']}")
@@ -72,7 +69,7 @@ async def main():
     count = wi.qdrant_client.count(collection_name=wi.VECTOR_COLLECTION_NAME)
     print(f"Qdrant points:  {count.count}")
 
-    await wi.wiki_client.aclose()
+    await wi.api_client.aclose()
     await wi.embedding_client.aclose()
     if wi.redis_client:
         await wi.redis_client.aclose()

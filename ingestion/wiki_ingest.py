@@ -1,20 +1,28 @@
-"""Star Citizen Wiki ingestion script.
+"""Star Citizen Wiki API v2 ingestion script.
 
-Fetches pages from the Star Citizen Wiki (MediaWiki API), extracts content
-from templates, chunks it, generates embeddings via OpenRouter, and stores
-everything in Qdrant + Redis cache.
+Uses api.star-citizen.wiki as the primary data source.
+All endpoints return JSON with pagination (data/links/meta structure).
+
+Endpoints used:
+    /api/vehicles       → Ship/vehicle stats (sc_get_ship_stats)
+    /api/galactapedia   → Lore articles (sc_search_lore)
+    /api/comm-links     → Official communications (sc_search_lore)
+    /api/items          → Items: armor, weapons, equipment (sc_ask)
+
+Content from galactapedia and comm-links is in translations.en_EN.
+Vehicles have structured fields (manufacturer, career, role, stats, etc.).
 
 Usage:
-    python3 -m ingestion.wiki_ingest          # full ingestion
-    python3 -m ingestion.test_quick           # quick test (3 ships)
-    python3 -m ingestion.test_ingest          # single ship test
+    python3 -m ingestion.run              # full ingestion
+    python3 -m ingestion.test_v2          # quick test (3 vehicles)
 """
 
 import asyncio
 import json
 import os
-import re
+import sys
 import time
+import warnings
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
@@ -29,45 +37,70 @@ from verse_mcp.constants import (
 )
 
 # ---------------------------------------------------------------------------
-# Configuration (read from env vars at runtime, not import time)
+# Configuration (read from env vars at runtime)
+# ---------------------------------------------------------------------------
+
 def _env(key: str, default: str) -> str:
-    """Read env var at call time, not module load time."""
     return os.getenv(key, default)
 
-WIKI_API_BASE = "https://starcitizen.tools/api.php"
-EMBEDDING_BASE_URL = "https://openrouter.ai/api/v1"
-
-# Categories to ingest (Wiki category name -> our category tag)
-CATEGORIES = [
-    ("Category:Ships", "ships"),
-    ("Category:Personal_armor", "armor"),
-    ("Category:Ground_vehicles", "vehicles"),
-    ("Category:Personal_equipment", "equipment"),
-    ("Category:Comm-Link", "lore"),
-    ("Category:Armor_sets", "armor"),
-]
-
-# Chunking
-CHUNK_SIZE = 600       # chars per chunk
-CHUNK_OVERLAP = 100    # overlap between chunks
-
-# Rate limiting (seconds between API calls)
-RATE_LIMIT_DELAY = 0.3
+API_BASE = _env("WIKI_API_BASE", "https://api.star-citizen.wiki/api")
+EMBEDDING_BASE_URL = _env("EMBEDDING_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY", "")
+REDIS_URL = _env("REDIS_URL", "redis://localhost:6379")
+QDRANT_URL = _env("QDRANT_URL", "http://localhost:6333")
+QDRANT_API_KEY = _env("QDRANT_API_KEY", "")
 
 # Pagination
-WIKI_PAGE_LIMIT = 50   # max per API call (MediaWiki allows up to 500)
+API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
+
+# Rate limiting
+RATE_LIMIT_DELAY = 0.2  # seconds between API calls
+
+# Chunking
+CHUNK_SIZE = 600
+CHUNK_OVERLAP = 100
+
+# Ingestion sources: (endpoint, category, content_extractor_name)
+# Each source defines how to extract searchable text from its items
+SOURCES = [
+    {
+        "endpoint": "/vehicles",
+        "category": "ships",
+        "description": "Ship and vehicle specifications",
+    },
+    {
+        "endpoint": "/galactapedia",
+        "category": "lore",
+        "description": "Galactapedia lore articles",
+    },
+    {
+        "endpoint": "/comm-links",
+        "category": "lore",
+        "description": "Official Comm-Links",
+    },
+    {
+        "endpoint": "/items?filter[type]=WeaponPersonal",
+        "category": "equipment",
+        "description": "Personal weapons",
+    },
+    {
+        "endpoint": "/items?filter[category]=fps-armor",
+        "category": "armor",
+        "description": "FPS armor",
+    },
+]
 
 # ---------------------------------------------------------------------------
-# Global clients (initialized in main / test)
+# Global clients
 # ---------------------------------------------------------------------------
 
-wiki_client: httpx.AsyncClient | None = None
+api_client: httpx.AsyncClient | None = None
 embedding_client: httpx.AsyncClient | None = None
 redis_client: redis_lib.Redis | None = None
-qdrant_client = None  # initialized via init_qdrant
+qdrant_client = None
 
 stats = {
-    "pages_fetched": 0,
+    "items_fetched": 0,
     "chunks_created": 0,
     "embeddings_generated": 0,
     "embeddings_cached": 0,
@@ -77,120 +110,215 @@ stats = {
 
 
 # ---------------------------------------------------------------------------
-# Wiki API helpers
+# API v2 helpers
 # ---------------------------------------------------------------------------
 
-async def wiki_get(params: dict) -> dict:
-    """Make a GET request to the MediaWiki API."""
-    assert wiki_client is not None
-    params["format"] = "json"
-    params["formatversion"] = 2
-    resp = await wiki_client.get(WIKI_API_BASE, params=params, timeout=30)
+async def api_get(path: str, params: dict | None = None) -> dict:
+    """Make a GET request to the Star Citizen Wiki API v2."""
+    assert api_client is not None
+    url = f"{API_BASE}{path}"
+    headers = {"Accept": "application/json"}
+    resp = await api_client.get(url, params=params or {}, headers=headers, timeout=30)
     resp.raise_for_status()
-    data = resp.json()
-    if "error" in data:
-        raise RuntimeError(f"Wiki API error: {data['error']}")
-    return data
+    return resp.json()
 
 
-async def fetch_category_members(category: str, limit: int = 0) -> list[str]:
-    """Fetch all page titles in a Wiki category (handles pagination)."""
-    titles = []
-    params = {
-        "action": "query",
-        "list": "categorymembers",
-        "cmtitle": category,
-        "cmlimit": min(limit, WIKI_PAGE_LIMIT) if limit else WIKI_PAGE_LIMIT,
-        "cmtype": "page",
-    }
+async def fetch_all_pages(endpoint: str) -> list[dict]:
+    """Fetch all items from a paginated API endpoint."""
+    all_items = []
+    page = 1
 
     while True:
-        data = await wiki_get(params)
-        members = data.get("query", {}).get("categorymembers", [])
-        for m in members:
-            titles.append(m["title"])
-
-        # Handle pagination
-        if "continue" in data and "cmcontinue" in data["continue"]:
-            if limit and len(titles) >= limit:
-                titles = titles[:limit]
-                break
-            params["cmcontinue"] = data["continue"]["cmcontinue"]
-            await asyncio.sleep(RATE_LIMIT_DELAY)
-        else:
+        data = await api_get(endpoint, params={"limit": API_PAGE_LIMIT, "page": page})
+        items = data.get("data", [])
+        if not items:
             break
+        all_items.extend(items)
 
-    return titles
+        # Check if there's a next page
+        links = data.get("links", {})
+        if not links.get("next"):
+            break
+        page += 1
+        await asyncio.sleep(RATE_LIMIT_DELAY)
+
+    return all_items
 
 
-async def fetch_page_content(title: str) -> str:
-    """Fetch the raw wikitext content of a single page."""
-    data = await wiki_get({
-        "action": "query",
-        "titles": title,
-        "prop": "revisions",
-        "rvprop": "content",
-        "rvslots": "main",
-    })
-    pages = data.get("query", {}).get("pages", [])
-    if not pages:
-        return ""
-    page = pages[0]
-    if "missing" in page:
-        return ""
-    revisions = page.get("revisions", [])
-    if not revisions:
-        return ""
-    return revisions[0].get("slots", {}).get("main", {}).get("content", "")
+async def fetch_item_detail(api_url: str) -> dict:
+    """Fetch a single item by its full API URL."""
+    assert api_client is not None
+    headers = {"Accept": "application/json"}
+    resp = await api_client.get(api_url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    return data.get("data", data)
 
 
 # ---------------------------------------------------------------------------
 # Content extraction
 # ---------------------------------------------------------------------------
 
-def extract_template_params(wikitext: str) -> dict[str, str]:
-    """Extract key-value pairs from the first template in wikitext."""
-    params: dict[str, str] = {}
-    # Find the first {{TemplateName ... }} block
-    match = re.search(r"\{\{(\w+[^{]*?)\}\}", wikitext, re.DOTALL)
-    if not match:
-        return params
+def extract_vehicle_text(item: dict) -> str:
+    """Extract searchable text from a vehicle item."""
+    parts = []
 
-    block = match.group(1)
-    # Parse |key = value pairs
-    for m in re.finditer(r"\|\s*(\w+)\s*=\s*([^\n|}]+)", block):
-        key = m.group(1).strip()
-        value = m.group(2).strip()
-        if value and value != "":  # skip empty
-            params[key] = value
-    return params
+    name = item.get("name", "")
+    if name:
+        parts.append(f"# {name}")
+
+    game_name = item.get("game_name", "")
+    if game_name and game_name != name:
+        parts.append(f"Game Name: {game_name}")
+
+    manufacturer = item.get("manufacturer", {})
+    if isinstance(manufacturer, dict):
+        mfg_name = manufacturer.get("name", manufacturer.get("code", ""))
+        if mfg_name:
+            parts.append(f"Manufacturer: {mfg_name}")
+    elif isinstance(manufacturer, str) and manufacturer:
+        parts.append(f"Manufacturer: {manufacturer}")
+
+    for field in ["career", "role", "type", "production_status", "size_class"]:
+        val = item.get(field, "")
+        if val and str(val).strip():
+            parts.append(f"{field.replace('_', ' ').title()}: {val}")
+
+    # Description
+    desc = item.get("game_description", item.get("description", ""))
+    if desc and str(desc).strip():
+        parts.append(f"\n{desc}")
+
+    # Key stats
+    stats_lines = []
+    for stat_key in ["cargo_capacity", "crew", "mass", "speed", "shield_hp"]:
+        val = item.get(stat_key)
+        if val is not None:
+            if isinstance(val, dict):
+                # e.g. crew: {min: 1, max: 2}
+                val_str = ", ".join(f"{k}: {v}" for k, v in val.items())
+                stats_lines.append(f"  {stat_key}: {val_str}")
+            else:
+                stats_lines.append(f"  {stat_key}: {val}")
+
+    if stats_lines:
+        parts.append("\nStats:\n" + "\n".join(stats_lines))
+
+    # Loaner ships
+    loaner = item.get("loaner", [])
+    if loaner:
+        loaner_names = []
+        for l in loaner:
+            if isinstance(l, dict):
+                loaner_names.append(l.get("name", l.get("slug", "")))
+            elif isinstance(l, str):
+                loaner_names.append(l)
+        if loaner_names:
+            parts.append(f"\nLoaner: {', '.join(loaner_names)}")
+
+    # MSRP
+    msrp = item.get("msrp")
+    if msrp:
+        parts.append(f"MSRP: ${msrp}")
+
+    return "\n".join(parts)
 
 
-def wikitext_to_plain_text(wikitext: str) -> str:
-    """Convert wikitext to plain text (strip templates, links, etc.)."""
-    text = wikitext
-    # Remove [[File:...]] and [[Image:...]]
-    text = re.sub(r"\[\[(?:File|Image):[^\]]+\]\]", "", text)
-    # Replace [[Target|Label]] with Label
-    text = re.sub(r"\[\[[^|\]]+\|([^\]]+)\]\]", r"\1", text)
-    # Replace [[Target]] with Target
-    text = re.sub(r"\[\[([^\]]+)\]\]", r"\1", text)
-    # Remove {{Ref|...}} and similar templates
-    text = re.sub(r"\{\{[^{}]+\}\}", "", text)
-    # Remove HTML tags
-    text = re.sub(r"<[^>]+>", "", text)
-    # Remove '''bold''' and ''italic''
-    text = re.sub(r"'''+([^']+)'''+", r"\1", text)
-    text = re.sub(r"''([^']+)''", r"\1", text)
-    # Remove headings markers
-    text = re.sub(r"=+\s*(.+?)\s*=+", r"\1", text)
-    # Remove bullet points / numbered lists markers
-    text = re.sub(r"^[\*#]+", "", text, flags=re.MULTILINE)
-    # Collapse whitespace
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = re.sub(r" {2,}", " ", text)
-    return text.strip()
+def extract_galactapedia_text(item: dict) -> str:
+    """Extract searchable text from a Galactapedia article."""
+    parts = []
 
+    title = item.get("title", "")
+    if title:
+        parts.append(f"# {title}")
+
+    # Content is in translations
+    translations = item.get("translations", {})
+    content = translations.get("en_EN", "")
+    if not content:
+        # Fallback to any available translation
+        for lang in ["en_EN", "de_DE", "fr_FR", "zh_CN"]:
+            content = translations.get(lang, "")
+            if content:
+                break
+
+    if content and content != "Pending review by the Ark research team...":
+        parts.append(content)
+
+    # Categories
+    categories = item.get("categories", [])
+    if categories:
+        cat_names = [c.get("name", "") for c in categories if isinstance(c, dict)]
+        if cat_names:
+            parts.append(f"Categories: {', '.join(cat_names)}")
+
+    return "\n\n".join(parts)
+
+
+def extract_comm_link_text(item: dict) -> str:
+    """Extract searchable text from a Comm-Link."""
+    parts = []
+
+    title = item.get("title", "")
+    if title:
+        parts.append(f"# {title}")
+
+    # Content is in translations
+    translations = item.get("translations", {})
+    content = translations.get("en_EN", "")
+    if not content:
+        for lang in ["en_EN", "de_DE", "fr_FR", "zh_CN"]:
+            content = translations.get(lang, "")
+            if content:
+                break
+
+    if content:
+        parts.append(content)
+
+    # Metadata
+    for field in ["channel", "category", "series"]:
+        val = item.get(field, "")
+        if val and str(val).strip():
+            parts.append(f"{field.title()}: {val}")
+
+    return "\n\n".join(parts)
+
+
+def extract_item_text(item: dict) -> str:
+    """Extract searchable text from an item (weapon, armor, equipment)."""
+    parts = []
+
+    name = item.get("name", item.get("title", ""))
+    if name:
+        parts.append(f"# {name}")
+
+    for field in ["type", "category", "size", "grade"]:
+        val = item.get(field, "")
+        if val and str(val).strip():
+            parts.append(f"{field.title()}: {val}")
+
+    description = item.get("description", item.get("game_description", ""))
+    if description and str(description).strip():
+        parts.append(f"\n{description}")
+
+    return "\n".join(parts)
+
+
+def get_content_extractor(endpoint: str):
+    """Return the appropriate content extractor for an endpoint."""
+    if "vehicles" in endpoint:
+        return extract_vehicle_text
+    elif "galactapedia" in endpoint:
+        return extract_galactapedia_text
+    elif "comm-links" in endpoint:
+        return extract_comm_link_text
+    else:
+        return extract_item_text
+
+
+# ---------------------------------------------------------------------------
+# Chunking
+# ---------------------------------------------------------------------------
 
 def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     """Split text into overlapping chunks."""
@@ -225,8 +353,8 @@ async def generate_embedding(text: str) -> list[float]:
 
     assert embedding_client is not None
     resp = await embedding_client.post(
-        f"{_env('EMBEDDING_BASE_URL', 'https://openrouter.ai/api/v1')}/embeddings",
-        headers={"Authorization": f"Bearer {_env('OPENROUTER_API_KEY', '')}"},
+        f"{EMBEDDING_BASE_URL}/embeddings",
+        headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
         json={
             "input": text,
             "model": EMBEDDING_MODEL,
@@ -261,18 +389,14 @@ def init_qdrant():
     from qdrant_client import QdrantClient
     from qdrant_client.http import models
 
-    qdrant_url = _env("QDRANT_URL", "http://localhost:6333")
-    qdrant_api_key = _env("QDRANT_API_KEY", "")
-
     warnings.filterwarnings("ignore", message="Api key is used with an insecure connection")
 
     qdrant_client = QdrantClient(
-        url=qdrant_url,
-        api_key=qdrant_api_key or None,
+        url=QDRANT_URL,
+        api_key=QDRANT_API_KEY or None,
         timeout=QDRANT_TIMEOUT,
     )
 
-    # Ensure collection exists
     collections = qdrant_client.get_collections().collections
     if VECTOR_COLLECTION_NAME not in [c.name for c in collections]:
         qdrant_client.create_collection(
@@ -318,77 +442,102 @@ async def upsert_chunks(chunks: list[str], source: str, url: str, category: str)
 
 
 # ---------------------------------------------------------------------------
-# Page processing pipeline
+# Ingestion pipeline
 # ---------------------------------------------------------------------------
 
-async def process_page(title: str, category: str) -> int:
-    """Fetch a wiki page, extract content, chunk, embed, and store. Returns chunk count."""
+async def process_item(item: dict, category: str, endpoint: str) -> int:
+    """Process a single API item: extract text, chunk, embed, store."""
     try:
-        wikitext = await fetch_page_content(title)
-        if not wikitext:
-            print(f"  [SKIP] {title}: no content")
+        # For galactapedia and comm-links, we need to fetch the full item
+        # because the list endpoint doesn't include translations
+        if "galactapedia" in endpoint or "comm-links" in endpoint:
+            api_url = item.get("api_url", "")
+            if api_url:
+                try:
+                    item = await fetch_item_detail(api_url)
+                    await asyncio.sleep(RATE_LIMIT_DELAY)
+                except Exception:
+                    pass  # Use the list data as fallback
+
+        # Extract text
+        extractor = get_content_extractor(endpoint)
+        text = extractor(item)
+
+        if not text or len(text.strip()) < 50:
             return 0
 
-        stats["pages_fetched"] += 1
-
-        # Extract template params for metadata
-        params = extract_template_params(wikitext)
-
-        # Convert to plain text
-        plain = wikitext_to_plain_text(wikitext)
-        if not plain or len(plain) < 50:
-            print(f"  [SKIP] {title}: content too short ({len(plain)} chars)")
-            return 0
-
-        # Build enriched text with template params
-        header_parts = [f"# {title}"]
-        if params.get("manufacturer"):
-            header_parts.append(f"Manufacturer: {params['manufacturer']}")
-        if params.get("career"):
-            header_parts.append(f"Career: {params['career']}")
-        if params.get("role"):
-            header_parts.append(f"Role: {params['role']}")
-        if params.get("size"):
-            header_parts.append(f"Size: {params['size']}")
-
-        enriched = "\n".join(header_parts) + "\n\n" + plain
+        stats["items_fetched"] += 1
 
         # Chunk
-        chunks = chunk_text(enriched)
+        chunks = chunk_text(text)
         if not chunks:
             return 0
 
-        # Build URL
-        page_url = f"https://starcitizen.tools/{title.replace(' ', '_')}"
+        # Build source URL
+        name = item.get("name", item.get("title", ""))
+        slug = item.get("slug", name.replace(" ", "_"))
+        source_url = item.get("web_url", f"https://api.star-citizen.wiki/{endpoint.split('?')[0].strip('/')}/{slug}")
 
         # Embed and store
-        await upsert_chunks(chunks, source=f"wiki:{title}", url=page_url, category=category)
+        source = f"api:{endpoint.split('?')[0].strip('/')}:{name}"
+        await upsert_chunks(chunks, source=source, url=source_url, category=category)
 
-        await asyncio.sleep(RATE_LIMIT_DELAY)
         return len(chunks)
 
     except Exception as e:
         stats["errors"] += 1
-        print(f"  [ERROR] {title}: {e}")
+        name = item.get("name", item.get("title", "unknown"))
+        print(f"  [ERROR] {name}: {e}")
         return 0
 
 
+async def ingest_source(source_config: dict) -> int:
+    """Ingest all items from a single source endpoint."""
+    endpoint = source_config["endpoint"]
+    category = source_config["category"]
+    description = source_config["description"]
+
+    print(f"\n{'='*60}")
+    print(f"Source: {endpoint}")
+    print(f"Category: {category} — {description}")
+    print(f"{'='*60}")
+
+    items = await fetch_all_pages(endpoint)
+    print(f"  Fetched {len(items)} items")
+
+    total_chunks = 0
+    for i, item in enumerate(items):
+        n = await process_item(item, category, endpoint)
+        total_chunks += n
+        elapsed = time.time() - stats["start_time"]
+        name = item.get("name", item.get("title", f"item_{i}"))
+        print(
+            f"  [{i+1}/{len(items)}] {name}: {n} chunks | "
+            f"Total: {stats['chunks_created']} chunks, "
+            f"{stats['embeddings_generated']} emb, "
+            f"{stats['embeddings_cached']} cached | "
+            f"{elapsed:.1f}s"
+        )
+
+    return total_chunks
+
+
 # ---------------------------------------------------------------------------
-# Main ingestion
+# Main
 # ---------------------------------------------------------------------------
 
-async def run_wiki_ingestion():
-    """Run full ingestion for all configured categories."""
-    global wiki_client, embedding_client, redis_client
+async def run_ingestion():
+    """Run full ingestion from all API v2 sources."""
+    global api_client, embedding_client, redis_client
 
     stats["start_time"] = time.time()
 
     # Init clients
-    wiki_client = httpx.AsyncClient(follow_redirects=True)
+    api_client = httpx.AsyncClient(follow_redirects=True)
     embedding_client = httpx.AsyncClient()
 
     try:
-        r = redis_lib.from_url(_env("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
+        r = redis_lib.from_url(REDIS_URL, decode_responses=True)
         await r.ping()
         redis_client = r
         print("Redis: OK")
@@ -397,40 +546,23 @@ async def run_wiki_ingestion():
         print(f"Redis: {e} (continuing without cache)")
 
     init_qdrant()
-    print(f"Qdrant: OK ({_env('QDRANT_URL', 'http://localhost:6333')})")
-    print(f"Embeddings: {EMBEDDING_MODEL} via {_env('EMBEDDING_BASE_URL', 'https://openrouter.ai/api/v1')}")
-    print(f"API key present: {bool(_env('OPENROUTER_API_KEY', ''))}")
-    print(f"Categories: {len(CATEGORIES)}")
-    print()
+    print(f"Qdrant: OK ({QDRANT_URL})")
+    print(f"API: {API_BASE}")
+    print(f"Embeddings: {EMBEDDING_MODEL} via {EMBEDDING_BASE_URL}")
+    print(f"API key present: {bool(OPENROUTER_API_KEY)}")
+    print(f"Sources: {len(SOURCES)}")
 
     total_chunks = 0
-
-    for cat_name, cat_tag in CATEGORIES:
-        print(f"{'='*60}")
-        print(f"Category: {cat_name} -> {cat_tag}")
-        print(f"{'='*60}")
-
-        titles = await fetch_category_members(cat_name)
-        print(f"  Found {len(titles)} pages")
-
-        for i, title in enumerate(titles):
-            n = await process_page(title, cat_tag)
-            total_chunks += n
-            elapsed = time.time() - stats["start_time"]
-            print(
-                f"  [{i+1}/{len(titles)}] {title}: {n} chunks | "
-                f"Total: {stats['chunks_created']} chunks, "
-                f"{stats['embeddings_generated']} emb, "
-                f"{stats['embeddings_cached']} cached | "
-                f"{elapsed:.1f}s"
-            )
+    for source in SOURCES:
+        n = await ingest_source(source)
+        total_chunks += n
 
     # Summary
     elapsed = time.time() - stats["start_time"]
     print(f"\n{'='*60}")
     print(f"INGESTION COMPLETE")
     print(f"{'='*60}")
-    print(f"Pages fetched:    {stats['pages_fetched']}")
+    print(f"Items fetched:    {stats['items_fetched']}")
     print(f"Chunks created:   {stats['chunks_created']}")
     print(f"Embeddings API:   {stats['embeddings_generated']}")
     print(f"Embeddings cache: {stats['embeddings_cached']}")
@@ -444,12 +576,12 @@ async def run_wiki_ingestion():
     print(f"Qdrant points:    {count.count}")
 
     # Cleanup
-    await wiki_client.aclose()
+    await api_client.aclose()
     await embedding_client.aclose()
     if redis_client:
-        await redis_client.close()
+        await redis_client.aclose()
     qdrant_client.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(run_wiki_ingestion())
+    asyncio.run(run_ingestion())
