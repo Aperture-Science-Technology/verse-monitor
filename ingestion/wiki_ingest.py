@@ -14,7 +14,6 @@ import asyncio
 import json
 import os
 import re
-import sys
 import time
 from uuid import NAMESPACE_URL, uuid5
 
@@ -258,11 +257,14 @@ async def generate_embedding(text: str) -> list[float]:
 def init_qdrant():
     """Initialize Qdrant client and ensure collection exists."""
     global qdrant_client
+    import warnings
     from qdrant_client import QdrantClient
     from qdrant_client.http import models
 
     qdrant_url = _env("QDRANT_URL", "http://localhost:6333")
     qdrant_api_key = _env("QDRANT_API_KEY", "")
+
+    warnings.filterwarnings("ignore", message="Api key is used with an insecure connection")
 
     qdrant_client = QdrantClient(
         url=qdrant_url,

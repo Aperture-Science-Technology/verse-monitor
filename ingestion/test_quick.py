@@ -75,7 +75,7 @@ async def main():
     await wi.wiki_client.aclose()
     await wi.embedding_client.aclose()
     if wi.redis_client:
-        await wi.redis_client.close()
+        await wi.redis_client.aclose()
     if wi.qdrant_client:
         wi.qdrant_client.close()
 

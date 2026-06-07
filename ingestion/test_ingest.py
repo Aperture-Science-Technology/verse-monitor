@@ -1,10 +1,7 @@
 """Quick test: fetch one ship, embed it, store in Qdrant."""
 
 import asyncio
-import sys
 import time
-
-sys.path.insert(0, "/home/glados/projects/verse-mcp")
 
 import httpx
 import redis.asyncio as redis_lib
