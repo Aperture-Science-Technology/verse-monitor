@@ -20,7 +20,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
 
-# Run with streamable-http transport
-ENV TRANSPORT=streamable-http
+# FastMCP stateless HTTP mode
 ENV PORT=8000
 CMD ["python3", "-m", "verse_mcp.server"]

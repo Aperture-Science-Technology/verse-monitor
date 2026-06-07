@@ -22,7 +22,11 @@ async def init_qdrant() -> None:
     qdrant_url = os.getenv("QDRANT_URL")
     if not qdrant_url:
         raise RuntimeError("QDRANT_URL not set")
-    _qdrant_client = QdrantClient(url=qdrant_url, timeout=QDRANT_TIMEOUT)
+    _qdrant_client = QdrantClient(
+        url=qdrant_url,
+        api_key=os.getenv("QDRANT_API_KEY"),
+        timeout=QDRANT_TIMEOUT,
+    )
     # Ensure collection exists
     collections = _qdrant_client.get_collections().collections
     collection_names = [c.name for c in collections]
