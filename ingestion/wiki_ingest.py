@@ -444,7 +444,7 @@ async def upsert_chunks(chunks: list[str], source: str, url: str, category: str,
     points = []
     for chunk_text in chunks:
         embedding = await generate_embedding(chunk_text)
-        uid = uuid5(NAMESPACE_URL, f"{source}:{chunk_text[:100]}")
+        uid = uuid5(NAMESPACE_URL, f"{category}:{source}:{chunk_text[:100]}")
         payload = {
             "content": chunk_text,
             "source": source,
