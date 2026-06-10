@@ -11,4 +11,4 @@ async def sc_get_guide(guide_title: str, player_level: str = "beginner") -> str:
 
 async def sc_search_lore(query: str, top_k: int = 5) -> str:
     """Search lore/universe from Galactapedia and Comm-Links."""
-    return await run_rag_pipeline(question=query, top_k=top_k)
+    return await run_rag_pipeline(question=query, category="lore", top_k=top_k)

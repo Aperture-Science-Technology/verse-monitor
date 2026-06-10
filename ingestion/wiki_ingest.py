@@ -52,7 +52,7 @@ QDRANT_API_KEY = _env("QDRANT_API_KEY", "")
 
 # Pagination
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
-API_TIMEOUT = 60.0     # seconds (API can be slow)
+API_TIMEOUT = 300.0   # seconds (galactapedia can be very slow)
 MAX_PAGES = 5          # max pages per source (to avoid extremely long runs)
 
 # Rate limiting
@@ -69,26 +69,37 @@ SOURCES = [
         "endpoint": "/vehicles",
         "category": "ships",
         "description": "Ship and vehicle specifications",
+        "content_extractor": "vehicle",
     },
     {
         "endpoint": "/galactapedia",
         "category": "lore",
         "description": "Galactapedia lore articles",
+        "content_extractor": "galactapedia",
     },
     {
         "endpoint": "/comm-links",
         "category": "lore",
         "description": "Official Comm-Links",
+        "content_extractor": "comm_link",
     },
     {
         "endpoint": "/items?filter[type]=WeaponPersonal",
-        "category": "equipment",
+        "category": "weapons",
         "description": "Personal weapons",
+        "content_extractor": "item",
     },
     {
         "endpoint": "/items?filter[category]=fps-armor",
         "category": "armor",
         "description": "FPS armor",
+        "content_extractor": "item",
+    },
+    {
+        "endpoint": "/items?filter[category]=fps-backpack",
+        "category": "equipment",
+        "description": "FPS backpacks and equipment",
+        "content_extractor": "item",
     },
 ]
 
@@ -161,15 +172,22 @@ async def fetch_item_detail(api_url: str) -> dict:
 # Content extraction
 # ---------------------------------------------------------------------------
 
+def _tr(val):
+    """Extract English text from a multilingual field (dict or plain string)."""
+    if isinstance(val, dict):
+        return val.get("en_EN") or val.get("de_DE") or val.get("fr_FR") or val.get("zh_CN") or ""
+    return str(val) if val else ""
+
+
 def extract_vehicle_text(item: dict) -> str:
-    """Extract searchable text from a vehicle item."""
+    """Extract searchable English text from a vehicle item."""
     parts = []
 
-    name = item.get("name", "")
+    name = _tr(item.get("name", ""))
     if name:
         parts.append(f"# {name}")
 
-    game_name = item.get("game_name", "")
+    game_name = _tr(item.get("game_name", ""))
     if game_name and game_name != name:
         parts.append(f"Game Name: {game_name}")
 
@@ -178,17 +196,15 @@ def extract_vehicle_text(item: dict) -> str:
         mfg_name = manufacturer.get("name", manufacturer.get("code", ""))
         if mfg_name:
             parts.append(f"Manufacturer: {mfg_name}")
-    elif isinstance(manufacturer, str) and manufacturer:
-        parts.append(f"Manufacturer: {manufacturer}")
 
     for field in ["career", "role", "type", "production_status", "size_class"]:
-        val = item.get(field, "")
-        if val and str(val).strip():
+        val = _tr(item.get(field, ""))
+        if val and val.strip():
             parts.append(f"{field.replace('_', ' ').title()}: {val}")
 
-    # Description
-    desc = item.get("game_description", item.get("description", ""))
-    if desc and str(desc).strip():
+    # Description — prefer en_EN
+    desc = _tr(item.get("game_description", item.get("description", "")))
+    if desc and desc.strip():
         parts.append(f"\n{desc}")
 
     # Key stats
@@ -197,7 +213,6 @@ def extract_vehicle_text(item: dict) -> str:
         val = item.get(stat_key)
         if val is not None:
             if isinstance(val, dict):
-                # e.g. crew: {min: 1, max: 2}
                 val_str = ", ".join(f"{k}: {v}" for k, v in val.items())
                 stats_lines.append(f"  {stat_key}: {val_str}")
             else:
@@ -222,6 +237,11 @@ def extract_vehicle_text(item: dict) -> str:
     msrp = item.get("msrp")
     if msrp:
         parts.append(f"MSRP: ${msrp}")
+
+    # Patch version
+    version = item.get("version", "")
+    if version:
+        parts.append(f"Version: {version}")
 
     return "\n".join(parts)
 
@@ -299,9 +319,14 @@ def extract_item_text(item: dict) -> str:
         if val and str(val).strip():
             parts.append(f"{field.title()}: {val}")
 
-    description = item.get("description", item.get("game_description", ""))
-    if description and str(description).strip():
+    description = _tr(item.get("description", item.get("game_description", "")))
+    if description and description.strip():
         parts.append(f"\n{description}")
+
+    # Version / patch
+    version = item.get("version", "")
+    if version:
+        parts.append(f"Version: {version}")
 
     return "\n".join(parts)
 
@@ -412,7 +437,7 @@ def init_qdrant():
         print(f"Collection '{VECTOR_COLLECTION_NAME}' already exists")
 
 
-async def upsert_chunks(chunks: list[str], source: str, url: str, category: str):
+async def upsert_chunks(chunks: list[str], source: str, url: str, category: str, patch_version: str | None = None):
     """Embed and upsert chunks into Qdrant."""
     from qdrant_client.http import models
 
@@ -420,16 +445,19 @@ async def upsert_chunks(chunks: list[str], source: str, url: str, category: str)
     for chunk_text in chunks:
         embedding = await generate_embedding(chunk_text)
         uid = uuid5(NAMESPACE_URL, f"{source}:{chunk_text[:100]}")
+        payload = {
+            "content": chunk_text,
+            "source": source,
+            "url": url,
+            "category": category,
+        }
+        if patch_version:
+            payload["patch_version"] = patch_version
         points.append(
             models.PointStruct(
                 id=str(uid),
                 vector=embedding,
-                payload={
-                    "content": chunk_text,
-                    "source": source,
-                    "url": url,
-                    "category": category,
-                },
+                payload=payload,
             )
         )
 
@@ -449,12 +477,10 @@ async def upsert_chunks(chunks: list[str], source: str, url: str, category: str)
 async def process_item(item: dict, category: str, endpoint: str) -> int:
     """Process a single API item: extract text, chunk, embed, store."""
     try:
-        # Extract text directly from the list data (no individual API calls)
-        # Galactapedia and comm-links already include translations in list responses
         extractor = get_content_extractor(endpoint)
         text = extractor(item)
 
-        if not text or len(text.strip()) < 50:
+        if not text or len(text.strip()) < 30:
             return 0
 
         stats["items_fetched"] += 1
@@ -465,19 +491,25 @@ async def process_item(item: dict, category: str, endpoint: str) -> int:
             return 0
 
         # Build source URL
-        name = item.get("name", item.get("title", ""))
+        name = _tr(item.get("name", item.get("title", "")))
         slug = item.get("slug", name.replace(" ", "_"))
         source_url = item.get("web_url", f"https://api.star-citizen.wiki/{endpoint.split('?')[0].strip('/')}/{slug}")
 
+        # Extract patch version from item metadata
+        patch_version = item.get("patch_version", item.get("version", None))
+        if not patch_version:
+            # Try to extract from production_status or other fields
+            patch_version = item.get("production_status", None)
+
         # Embed and store
         source = f"api:{endpoint.split('?')[0].strip('/')}:{name}"
-        await upsert_chunks(chunks, source=source, url=source_url, category=category)
+        await upsert_chunks(chunks, source=source, url=source_url, category=category, patch_version=patch_version)
 
         return len(chunks)
 
     except Exception as e:
         stats["errors"] += 1
-        name = item.get("name", item.get("title", "unknown"))
+        name = _tr(item.get("name", item.get("title", "unknown")))
         print(f"  [ERROR] {name}: {e}")
         return 0
 

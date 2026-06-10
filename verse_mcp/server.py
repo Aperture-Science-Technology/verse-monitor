@@ -40,9 +40,9 @@ async def healthz(request: Request) -> PlainTextResponse:
 
 
 @mcp.tool()
-async def sc_ask(question: str) -> str:
+async def sc_ask(question: str, category: str | None = None) -> str:
     """Ask a question about Star Citizen. Returns relevant lore, ship info, and game mechanics from the knowledge base."""
-    return await _sc_ask(question)
+    return await _sc_ask(question, category=category)
 
 
 @mcp.tool()
