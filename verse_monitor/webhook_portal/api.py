@@ -185,7 +185,7 @@ def create_app() -> FastAPI:
         title="Verse Monitor Webhook Portal",
         version="1.0.0",
         description="Self-service webhook subscription portal for Star Citizen event alerts",
-        docs_url="/docs",
+        docs_url=None,
         redoc_url=None,
     )
 
