@@ -1,0 +1,46 @@
+"""Configuration pydantic-settings pour verse-monitor.
+
+Lit les variables d'environnement depuis le .env partagé avec verse-mcp.
+"""
+
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    """Variables d'environnement du service."""
+
+    # Redis
+    REDIS_URL: str = "redis://redis-verse:6379"
+    REDIS_PASSWORD: str = ""
+
+    # Qdrant
+    QDRANT_URL: str = "http://qdrant:6333"
+    QDRANT_API_KEY: str = ""
+    QDRANT_COLLECTION: str = "sc_events"
+
+    # Discord webhooks (optionnels — si vide, les alertes sont skippées)
+    DISCORD_WEBHOOK_CRITICAL: str = ""
+    DISCORD_WEBHOOK_HIGH: str = ""
+    DISCORD_WEBHOOK_MEDIUM: str = ""
+
+    # Intervals de polling (secondes)
+    POLL_ROADMAP_INTERVAL: int = 300
+    POLL_DEVTRACKER_INTERVAL: int = 120
+    POLL_COMMLINKS_INTERVAL: int = 300
+
+    # Redis Stream
+    STREAM_NAME: str = "sc:events"
+    STREAM_MAXLEN: int = 2000
+    DEDUP_TTL: int = 86400  # 24h
+
+    # Consumer group
+    CONSUMER_GROUP: str = "alert-workers"
+    CONSUMER_NAME: str = "worker-1"
+
+    # HTTP
+    HTTP_TIMEOUT: int = 30
+    HTTP_RETRIES: int = 2
+    HTTP_RETRY_BACKOFF: int = 5
+
+
+settings = Settings()
