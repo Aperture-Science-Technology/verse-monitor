@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verse Monitor — Webhook Portal</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+  --green: #3fb950; --red: #f85149; --orange: #d29922;
+  --critical: #f85149; --high: #d29922; --medium: #58a6ff; --low: #8b949e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+h1 { font-size: 1.8em; margin-bottom: 8px; }
+h2 { font-size: 1.3em; margin: 24px 0 12px; }
+.subtitle { color: var(--muted); margin-bottom: 32px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; color: var(--muted); }
+.form-group input, .form-group select { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 1em; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
+.form-group small { color: var(--muted); font-size: 0.8em; }
+.checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.checkbox-grid label { display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; }
+.checkbox-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+.btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--accent); color: #000; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 0.9em; }
+.alert-success { background: rgba(63,185,80,0.15); border: 1px solid var(--green); }
+.alert-error { background: rgba(248,81,73,0.15); border: 1px solid var(--red); }
+.api-key-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 0.85em; word-break: break-all; margin: 8px 0; }
+.api-key-box .key { color: var(--green); }
+.dashboard-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.stat-box { text-align: center; padding: 12px; background: var(--bg); border-radius: 6px; }
+.stat-box .number { font-size: 1.8em; font-weight: 700; }
+.stat-box .label { font-size: 0.8em; color: var(--muted); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; }
+.badge-active { background: rgba(63,185,80,0.2); color: var(--green); }
+.badge-inactive { background: rgba(248,81,73,0.2); color: var(--red); }
+.event-list { list-style: none; }
+.event-list li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85em; }
+.event-list li:last-child { border-bottom: none; }
+.event-list .time { color: var(--muted); font-size: 0.9em; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tab { padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); }
+.tab.active { border-bottom-color: var(--accent); color: var(--text); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.hidden { display: !important; }
+.copy-btn { padding: 4px 10px; font-size: 0.8em; }
+#loading { text-align: center; padding: 40px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app" class="container">
+  <div id="loading">Loading...</div>
+</div>
+
+<script>
+const API_BASE = '/api/v1';
+
+// ===== STATE =====
+let state = { view: null, apiKey: null, sub: null };
+
+// ===== HELPERS =====
+function $(sel) { return document.querySelector(sel); }
+function el(tag, attrs={}, children=[]) {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})) {
+    if (k==='class') e.className=v;
+    else if (k==='text') e.textContent=v;
+    else if (k==='html') e.innerHTML=v;
+    else e.setAttribute(k,v);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c => {
+    if (typeof c==='string') e.appendChild(document.createTextNode(c));
+    else if (c) e.appendChild(c);
+  });
+  return e;
+}
+
+function alertEl(type, msg) {
+  return el('div', {class: `alert alert-${type}`, text: msg});
+}
+
+async function api(path, opts={}) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    headers: {'Content-Type': 'application/json'},
+    ...opts
+  });
+  const data = await r.json().catch(()=>({}));
+  return {status: r.status, data};
+}
+
+// ===== VIEWS =====
+function render() {
+  const app = $('#app');
+  app.innerHTML = '';
+
+  if (state.view === 'register') renderRegister(app);
+  else if (state.view === 'dashboard') renderDashboard(app);
+  else if (state.view === 'edit') renderEdit(app);
+  else renderHome(app);
+}
+
+function renderHome(app) {
+  // Check URL for ?key= parameter
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get('key');
+  if (key) {
+    state.apiKey = key;
+    state.view = 'dashboard';
+    loadDashboard(key);
+    return;
+  }
+
+  app.appendChild(el('h1', {}, ['🔭 Verse Monitor']));
+  app.appendChild(el('p', {class: 'subtitle', text: 'Real-time Star Citizen event alerts via webhook. Subscribe to roadmap changes, patch notes, comm-links, and dev posts — filtered for what matters to you.'}));
+
+  app.appendChild(el('div', {class: 'card'}, [
+    el('h2', {}, ['🚀 Get Started']),
+    el('p', {}, ['Create a webhook subscription to receive Star Citizen updates in your Discord server, Slack workspace, or any HTTPS endpoint.']),
+    el('button', {class: 'btn btn-primary', text: 'Create Subscription'}, []).addEventListener('click', () => { state.view='register'; render(); })
+  ]));
+
+  app.appendChild(el('div', {class: 'card'}, [
+    el('h2', {}, ['🔑 Existing Subscription?']),
+    el('div', {class: 'form-group'}, [
+      el('label', {}, ['API Key']),
+      el('input', {id: 'key-input', placeholder: 'Enter your API key to access dashboard'})
+    ]),
+    el('button', {class: 'btn btn-secondary', text: 'Access Dashboard'}, []).addEventListener('click', () => {
+      const key = $('#key-input').value.trim();
+      if (key) { state.apiKey=key; state.view='dashboard'; loadDashboard(key); }
+    })
+  ]));
+}
+
+function renderRegister(app) {
+  app.appendChild(el('h1', {}, ['🚀 New Subscription']));
+  app.appendChild(el('p', {class: 'subtitle', text: 'Configure your webhook to receive Star Citizen event alerts.'}));
+
+  const form = el('div', {class: 'card'});
+
+  const fields = {};
+
+  // Name
+  const nameGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Project / Channel Name']),
+    fields.name = el('input', {placeholder: 'e.g. StarCitizen FR', required: true})
+  ]);
+
+  // Webhook URL
+  const urlGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Webhook URL']),
+    fields.url = el('input', {placeholder: 'https://discord.com/api/webhooks/...', required: true}),
+    el('small', {}, ['Discord, Slack, Telegram Bot API, or any HTTPS webhook endpoint'])
+  ]);
+
+  // Format
+  const fmtGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Output Format']),
+    fields.format = el('select', {}, [
+      el('option', {value: 'discord', text: 'Discord (embeds)'}),
+      el('option', {value: 'slack', text: 'Slack (Block Kit)'}),
+      el('option', {value: 'telegram', text: 'Telegram (MarkdownV2)'}),
+      el('option', {value: 'generic', text: 'Generic (raw JSON)'})
+    ])
+  ]);
+
+  // Priority
+  const priGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Minimum Priority']),
+    fields.priority = el('select', {}, [
+      el('option', {value: 'LOW', text: '🔵 Low — everything'}),
+      el('option', {value: 'MEDIUM', selected: true, text: '🟡 Medium — significant changes'}),
+      el('option', {value: 'HIGH', text: '🟠 High — major updates'}),
+      el('option', {value: 'CRITICAL', text: '🔴 Critical — patches & breaking changes only'})
+    ])
+  ]);
+
+  // Event types
+  const types = [
+    {value:'roadmap_card_added', label:'🆕 Roadmap cards added'},
+    {value:'roadmap_card_released', label:'✅ Features released'},
+    {value:'roadmap_card_delayed', label:'⚠️ Features delayed'},
+    {value:'roadmap_card_removed', label:'🗑️ Cards removed'},
+    {value:'roadmap_card_updated', label:'📝 Cards updated'},
+    {value:'patch_notes_live', label:'🚨 Patch notes'},
+    {value:'devtracker_post', label:'📌 Dev posts'},
+    {value:'comm_link_published', label:'📰 Comm-Links'},
+    {value:'twisc_published', label:'📋 TWISC'},
+    {value:'monthly_report', label:'📊 Monthly report'}
+  ];
+  const typeCheckboxes = [];
+  const typesGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Event Types']),
+    el('div', {class: 'checkbox-grid'}, types.map(t => {
+      const l = el('label', {}, [
+        typeCheckboxes.push(el('input', {type: 'checkbox', value: t.value, checked: ['roadmap_card_delayed','patch_notes_live','roadmap_card_released','devtracker_post'].includes(t.value)})),
+        document.createTextNode(t.label)
+      ]);
+      return l;
+    }))
+  ]);
+
+  // Keywords
+  const kwGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Keywords (optional)']),
+    fields.keywords = el('input', {placeholder: 'e.g. Drake, Idris, 4.0, server meshing'}),
+    el('small', {}, ['Comma-separated. Only alerts containing these words will be sent.'])
+  ]);
+
+  // Category
+  const catGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Category']),
+    fields.category = el('select', {}, [
+      el('option', {value: '', text: 'All categories'}),
+      el('option', {value: 'ship', text: 'Ships'}),
+      el('option', {value: 'gameplay', label: 'Gameplay'}),
+      el('option', {value: 'tech', text: 'Technology'}),
+      el('option', {value: 'event', text: 'Events'}),
+      el('option', {value: 'lore', text: 'Lore'})
+    ])
+  ]);
+
+  // Rate limit
+  const rlGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Rate Limit (alerts/hour)']),
+    fields.rateLimit = el('input', {type: 'number', value: '30', min: '1', max: '100'})
+  ]);
+
+  const submitBtn = el('button', {class: 'btn btn-primary', text: '🚀 Create Subscription'});
+
+  form.append(nameGroup, urlGroup, fmtGroup, priGroup, typesGroup, kwGroup, catGroup, rlGroup, submitBtn);
+  app.appendChild(form);
+  app.appendChild(el('p', {}, [el('a', {href: '#', text: '← Back to home'}, []).addEventListener('click', (e) => { e.preventDefault(); state.view=null; render(); })]));
+
+  submitBtn.addEventListener('click', async () => {
+    const eventTypes = Array.from(document.querySelectorAll('.checkbox-grid input:checked')).map(cb => cb.value);
+    const payload = {
+      name: fields.name.value.trim(),
+      webhook_url: fields.url.value.trim(),
+      format: fields.format.value,
+      priority_min: fields.priority.value,
+      event_types: eventTypes,
+      keywords: fields.keywords.value.split(',').map(k=>k.trim()).filter(Boolean),
+      category: fields.category.value || null,
+      rate_limit: parseInt(fields.rateLimit.value) || 30
+    };
+    if (!payload.name || !payload.webhook_url) {
+      form.insertBefore(alertEl('error', 'Name and webhook URL are required.'), form.firstChild);
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating...';
+    const {status, data} = await api('/subscriptions', {method:'POST', body: JSON.stringify(payload)});
+    if (status === 201) {
+      // Redirect to dashboard
+      window.history.replaceState({}, '', `?key=${data.api_key}`);
+      state.apiKey = data.api_key;
+      state.view = 'dashboard';
+      loadDashboard(data.api_key);
+    } else {
+      form.insertBefore(alertEl('error', data.detail || data.error || 'Failed to create subscription'), form.firstChild);
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🚀 Create Subscription';
+    }
+  });
+}
+
+async function loadDashboard(key) {
+  const {status, data} = await api(`/subscriptions/${key}`);
+  if (status === 200) {
+    state.sub = data;
+    state.apiKey = key;
+    render();
+  } else {
+    state.view = null;
+    const app = $('#app');
+    app.innerHTML = '';
+    app.appendChild(alertEl('error', 'Invalid API key. Subscription not found.'));
+    app.appendChild(el('p', {}, [el('a', {href: '#', text: '← Back to home'}, []).addEventListener('click', (e) => { e.preventDefault(); state.view=null; render(); })]));
+  }
+}
+
+function renderDashboard(app) {
+  const s = state.sub;
+  if (!s) { app.appendChild(el('div',{id:'loading',text:'Loading...'})); return; }
+
+  app.appendChild(el('h1', {}, ['📊 Dashboard']));
+  app.appendChild(el('div', {class: 'header-row'}, [
+    el('span', {}, [el('strong', {}, s.name)]),
+    el('span', {class: `badge badge-${s.active?'active':'inactive'}`, text: s.active ? '🟢 Active' : '🔴 Inactive'})
+  ]));
+
+  // API Key section
+  const keySection = el('div', {class: 'card'}, [
+    el('h2', {}, ['🔑 API Key']),
+    el('div', {class: 'api-key-box'}, [
+      el('span', {class: 'key'}, s.api_key || state.apiKey)
+    ]),
+    el('button', {class: 'btn btn-secondary copy-btn', text: '📋 Copy'}, []).addEventListener('click', () => {
+      navigator.clipboard.writeText(state.apiKey);
+    })
+  ]);
+
+  // Stats section
+  const statsSection = el('div', {class: 'card'}, [
+    el('h2', {}, ['📈 Stats']),
+    el('div', {class: 'dashboard-stats'}, [
+      statBox(s.total_deliveries, 'Total Delivered'),
+      statBox(s.failure_count, 'Failures'),
+      statBox(`${s.rate_limit}/hr`, 'Rate Limit')
+    ])
+  ]);
+
+  // Config summary
+  const eventTypesPreview = s.event_types && s.event_types.length ? s.event_types.join(', ') : 'All';
+  const keywordsPreview = s.keywords && s.keywords.length ? s.keywords.join(', ') : 'None';
+  const configSection = el('div', {class: 'card'}, [
+    el('h2', {}, ['⚙️ Configuration']),
+    el('ul', {class: 'event-list'}, [
+      li('Priority', `≥ ${s.priority_min}`),
+      li('Event Types', eventTypesPreview),
+      li('Keywords', keywordsPreview),
+      li('Category', s.category || 'All'),
+      li('Format', s.format),
+      li('Created', new Date(s.created_at).toLocaleString()),
+      li('Last Delivery', s.last_delivery ? new Date(s.last_delivery).toLocaleString() : 'Never')
+    ])
+  ]);
+
+  // Actions
+  const actionsSection = el('div', {class: 'card'}, [
+    el('div', {class: 'header-row'}, [
+      el('span', {}, [el('strong', {}, ['Actions'])]),
+      el('div', {}, [
+        el('button', {class: 'btn btn-secondary', text: '🧪 Test Ping'}, []).addEventListener('click', async () => {
+          await api(`/subscriptions/${state.apiKey}/test`, {method:'POST'});
+          alert('Test ping sent! Check your webhook endpoint.');
+        }),
+        el('button', {class: 'btn btn-secondary', text: '✏️ Edit'}, []).addEventListener('click', () => { state.view='edit'; render(); }),
+        el('button', {class: 'btn btn-danger', text: '🗑️ Delete'}, []).addEventListener('click', async () => {
+          if (confirm('Delete this subscription? This cannot be undone.')) {
+            await api(`/subscriptions/${state.apiKey}`, {method:'DELETE'});
+            window.history.replaceState({}, '', '/');
+            state = {view:null, apiKey:null, sub:null};
+            render();
+          }
+        })
+      ])
+    ])
+  ]);
+
+  app.append(keySection, statsSection, configSection, actionsSection);
+  app.appendChild(el('p', {}, [el('a', {href: '#', text: '← Back to home'}, []).addEventListener('click', (e) => { e.preventDefault(); window.history.replaceState({}, '', '/'); state={view:null,apiKey:null,sub:null}; render(); })]));
+}
+
+function renderEdit(app) {
+  const s = state.sub;
+  if (!s) return;
+
+  app.appendChild(el('h1', {}, ['✏️ Edit Subscription']));
+  app.appendChild(el('p', {class: 'subtitle', text: 'Update your webhook configuration.'}));
+
+  const form = el('div', {class: 'card'});
+
+  // Webhook URL
+  const urlGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Webhook URL']),
+    el('input', {id: 'edit-url', value: s.webhook_url, required: true})
+  ]);
+
+  // Format
+  const fmtGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Output Format']),
+    el('select', {id: 'edit-format'}, ['discord','slack','telegram','generic'].map(f =>
+      el('option', {value: f, selected: s.format===f, text: f.charAt(0).toUpperCase()+f.slice(1)})
+    ))
+  ]);
+
+  // Priority
+  const priGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Minimum Priority']),
+    el('select', {id: 'edit-priority'}, ['LOW','MEDIUM','HIGH','CRITICAL'].map(p =>
+      el('option', {value: p, selected: s.priority_min===p, text: p})
+    ))
+  ]);
+
+  // Rate limit
+  const rlGroup = el('div', {class: 'form-group'}, [
+    el('label', {}, ['Rate Limit (alerts/hour)']),
+    el('input', {id: 'edit-rate', type: 'number', value: s.rate_limit, min: '1', max: '100'})
+  ]);
+
+  const saveBtn = el('button', {class: 'btn btn-primary', text: '💾 Save Changes'});
+  const cancelBtn = el('button', {class: 'btn btn-secondary', text: '← Cancel'});
+
+  form.append(urlGroup, fmtGroup, priGroup, rlGroup, saveBtn, cancelBtn);
+  app.appendChild(form);
+
+  cancelBtn.addEventListener('click', () => { state.view='dashboard'; render(); });
+  saveBtn.addEventListener('click', async () => {
+    const payload = {
+      webhook_url: $('#edit-url').value.trim(),
+      format: $('#edit-format').value,
+      priority_min: $('#edit-priority').value,
+      rate_limit: parseInt($('#edit-rate').value) || 30
+    };
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    const {status, data} = await api(`/subscriptions/${state.apiKey}`, {method:'PATCH', body: JSON.stringify(payload)});
+    if (status === 200) {
+      state.sub = {...state.sub, ...data};
+      state.view = 'dashboard';
+      render();
+    } else {
+      form.insertBefore(alertEl('error', data.detail || 'Failed to update'), form.firstChild);
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Save Changes';
+    }
+  });
+}
+
+function statBox(number, label) {
+  return el('div', {class: 'stat-box'}, [
+    el('div', {class: 'number'}, String(number)),
+    el('div', {class: 'label'}, label)
+  ]);
+}
+
+function li(label, value) {
+  return el('li', {}, [el('strong', {}, `${label}: `), document.createTextNode(value)]);
+}
+
+// ===== INIT =====
+render();
+</script>
+</body>
+</html>
