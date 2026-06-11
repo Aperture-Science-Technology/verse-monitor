@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 import redis.asyncio as redis
+from redis import exceptions as redis_exceptions
 
 from verse_monitor.config import settings
 from verse_monitor.models import SCEvent
@@ -72,7 +73,7 @@ async def ensure_consumer_group(r: redis.Redis) -> None:
             id="0",
             mkstream=True,
         )
-    except redis.exceptions.ResponseError as e:
+    except redis_exceptions.ResponseError as e:
         if "BUSYGROUP" in str(e):
             pass  # Le groupe existe déjà
         else:
