@@ -5,447 +5,493 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verse Monitor — Webhook Portal</title>
 <style>
-:root {
-  --bg: #0d1117; --surface: #161b22; --border: #30363d;
-  --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
-  --green: #3fb950; --red: #f85149; --orange: #d29922;
-  --critical: #f85149; --high: #d29922; --medium: #58a6ff; --low: #8b949e;
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--border2:#373e47;--text:#c9d1d9;--text2:#8b949e;--accent:#58a6ff;--accent2:#1f6feb;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--radius:12px;--radius-sm:8px;--shadow:0 8px 24px rgba(0,0,0,.4)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;transition:color .15s}
+a:hover{color:#79c0ff}
+.container{max-width:680px;margin:0 auto;padding:60px 24px}
+
+/* HEADER */
+.header{text-align:center;margin-bottom:48px}
+.header h1{font-size:2.2em;font-weight:700;margin-bottom:12px;background:linear-gradient(135deg,var(--accent),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--text2);font-size:1.1em;max-width:480px;margin:0 auto}
+.features{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px}
+.feature-pill{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:.8em;color:var(--text2)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:20px;box-shadow:var(--shadow);animation:fadeIn .3s ease}
+.card+.card{margin-top:16px}
+.card-title{font-size:1.25em;font-weight:600;margin-bottom:8px}
+.card-desc{color:var(--text2);margin-bottom:20px;font-size:.95em}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border:none;border-radius:var(--radius-sm);font-size:1em;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--accent2);color:#fff}
+.btn-primary:hover:not(:disabled){background:#388bfd}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover:not(:disabled){background:var(--border)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+.btn-danger:hover:not(:disabled){background:var(--red);color:#fff}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid transparent}
+.btn-ghost:hover:not(:disabled){color:var(--text);background:var(--surface2)}
+.btn-sm{padding:8px 16px;font-size:.875em}
+.btn-lg{padding:16px 32px;font-size:1.1em;width:100%}
+.btn .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+/* FORM */
+.form-group{margin-bottom:20px}
+.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:.9em;color:var(--text)}
+.form-group .hint{font-size:.8em;color:var(--text2);margin-top:4px}
+.form-control{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:1em;transition:border-color .15s,box-shadow .15s}
+.form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.form-control::placeholder{color:var(--text2);opacity:.6}
+.form-control.valid{border-color:var(--green)}
+.form-control.invalid{border-color:var(--red)}
+textarea.form-control{resize:vertical;min-height:80px}
+select.form-control{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* FORMAT CARDS */
+.format-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.format-card{background:var(--bg);border:2px solid var(--border);border-radius:var(--radius-sm);padding:16px 12px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.format-card:hover{border-color:var(--border2)}
+.format-card.selected{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.format-card .icon{font-size:1.6em;margin-bottom:6px}
+.format-card .label{font-size:.8em;font-weight:600;color:var(--text)}
+.format-card .check{position:absolute;top:6px;right:6px;width:18px;height:18px;background:var(--accent);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:.7em;color:#fff}
+.format-card.selected .check{display:flex}
+
+/* TOGGLE CHIPS */
+.chip-grid{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:.85em;cursor:pointer;transition:all .15s;color:var(--text2);user-select:none}
+.chip:hover{border-color:var(--border2);color:var(--text)}
+.chip.selected{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+
+/* TAGS INPUT */
+.tags-input{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:44px;align-items:center;cursor:text;transition:border-color .15s}
+.tags-input:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.tags-input .tag{background:var(--accent);color:#000;border-radius:14px;padding:2px 10px;font-size:.8em;font-weight:600;display:flex;align-items:center;gap:4px}
+.tags-input .tag .remove{cursor:pointer;opacity:.7;font-size:1.1em;line-height:1}
+.tags-input .tag .remove:hover{opacity:1}
+.tags-input input{border:none;background:transparent;color:var(--text);font-size:.9em;outline:none;flex:1;min-width:80px;padding:2px 4px}
+
+/* PRIORITY SELECTOR */
+.priority-selector{display:flex;gap:8px}
+.priority-option{flex:1;background:var(--bg);border:2px solid var(--border);border-radius:var(--radius-sm);padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s}
+.priority-option:hover{border-color:var(--border2)}
+.priority-option.selected{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.priority-option .emoji{font-size:1.4em;margin-bottom:4px}
+.priority-option .label{font-size:.75em;font-weight:600;color:var(--text2)}
+.priority-option.selected .label{color:var(--accent)}
+
+/* ALERTS */
+.alert{padding:14px 18px;border-radius:var(--radius-sm);margin-bottom:16px;font-size:.9em;display:flex;align-items:flex-start;gap:10px;animation:fadeIn .2s ease}
+.alert-success{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:var(--green)}
+.alert-error{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red)}
+.alert-warning{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);color:var(--orange)}
+.alert .icon{font-size:1.2em;flex-shrink:0;margin-top:1px}
+
+/* TOASTS */
+.toast-container{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:8px;max-width:360px}
+.toast{padding:14px 18px;border-radius:var(--radius-sm);font-size:.9em;animation:slideIn .3s ease;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px}
+.toast-success{background:var(--surface);border:1px solid var(--green);color:var(--text)}
+.toast-error{background:var(--surface);border:1px solid var(--red);color:var(--text)}
+.toast-icon{font-size:1.2em}
+
+/* DASHBOARD */
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.dash-header h1{font-size:1.6em;font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.badge-active{background:rgba(63,185,80,.15);color:var(--green)}
+.badge-inactive{background:rgba(248,81,73,.15);color:var(--red)}
+.badge-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center}
+.stat-card .value{font-size:2em;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:.8em;color:var(--text2);margin-top:4px}
+
+/* CONFIG LIST */
+.config-list{list-style:none}
+.config-list li{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.config-list li:last-child{border-bottom:none}
+.config-list .key{color:var(--text2);font-size:.9em}
+.config-list .value{font-weight:600;font-size:.9em}
+
+/* API KEY BOX */
+.key-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:.85em;word-break:break-all;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.key-box .key{color:var(--green);flex:1}
+.key-box .copy-btn{flex-shrink:0}
+
+/* ACTIONS */
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+
+/* MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;animation:fadeIn .15s ease;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;max-width:440px;width:100%;box-shadow:var(--shadow);animation:scaleIn .2s ease}
+.modal h3{font-size:1.2em;margin-bottom:12px}
+.modal p{color:var(--text2);margin-bottom:24px;font-size:.95em}
+.modal-actions{display:flex;gap:12px;justify-content:flex-end}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:60px;gap:16px;color:var(--text2)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px;color:var(--text2)}
+.empty .icon{font-size:3em;margin-bottom:12px;opacity:.5}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .container{padding:32px 16px}
+  .header h1{font-size:1.6em}
+  .form-row{grid-template-columns:1fr}
+  .format-grid{grid-template-columns:repeat(2,1fr)}
+  .stats-grid{grid-template-columns:1fr}
+  .priority-selector{flex-direction:column}
+  .dash-header{flex-direction:column;align-items:flex-start}
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-.container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
-h1 { font-size: 1.8em; margin-bottom: 8px; }
-h2 { font-size: 1.3em; margin: 24px 0 12px; }
-.subtitle { color: var(--muted); margin-bottom: 32px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-bottom: 20px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; color: var(--muted); }
-.form-group input, .form-group select { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 1em; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
-.form-group small { color: var(--muted); font-size: 0.8em; }
-.checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.checkbox-grid label { display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; }
-.checkbox-grid input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
-.btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-.btn:hover { opacity: 0.85; }
-.btn-primary { background: var(--accent); color: #000; }
-.btn-danger { background: var(--red); color: #fff; }
-.btn-secondary { background: var(--border); color: var(--text); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 0.9em; }
-.alert-success { background: rgba(63,185,80,0.15); border: 1px solid var(--green); }
-.alert-error { background: rgba(248,81,73,0.15); border: 1px solid var(--red); }
-.api-key-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 0.85em; word-break: break-all; margin: 8px 0; }
-.api-key-box .key { color: var(--green); }
-.dashboard-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
-.stat-box { text-align: center; padding: 12px; background: var(--bg); border-radius: 6px; }
-.stat-box .number { font-size: 1.8em; font-weight: 700; }
-.stat-box .label { font-size: 0.8em; color: var(--muted); }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; }
-.badge-active { background: rgba(63,185,80,0.2); color: var(--green); }
-.badge-inactive { background: rgba(248,81,73,0.2); color: var(--red); }
-.event-list { list-style: none; }
-.event-list li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85em; }
-.event-list li:last-child { border-bottom: none; }
-.event-list .time { color: var(--muted); font-size: 0.9em; }
-.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
-.tab { padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); }
-.tab.active { border-bottom-color: var(--accent); color: var(--text); }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.hidden { display: !important; }
-.copy-btn { padding: 4px 10px; font-size: 0.8em; }
-#loading { text-align: center; padding: 40px; color: var(--muted); }
+
+/* ANIMATIONS */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
 </style>
 </head>
 <body>
-<div id="app" class="container">
-  <div id="loading">Loading...</div>
-</div>
+
+<div class="toast-container" id="toasts"></div>
+<div id="app"><div class="loading"><div class="spinner"></div><span>Chargement...</span></div></div>
 
 <script>
-const API_BASE = '/api/v1';
+(function(){
+'use strict';
 
-// ===== STATE =====
-let state = { view: null, apiKey: null, sub: null };
+var API_BASE = '/api/v1';
+var state = { view: 'home', apiKey: null, sub: null };
 
 // ===== HELPERS =====
-function $(sel) { return document.querySelector(sel); }
-function el(tag, attrs={}, children=[]) {
-  const e = document.createElement(tag);
-  for (const [k,v] of Object.entries(attrs||{})) {
-    if (k==='class') e.className=v;
-    else if (k==='text') e.textContent=v;
-    else if (k==='html') e.innerHTML=v;
-    else e.setAttribute(k,v);
-  }
-  (Array.isArray(children)?children:[children]).forEach(c => {
-    if (typeof c==='string') e.appendChild(document.createTextNode(c));
-    else if (c) e.appendChild(c);
-  });
-  return e;
+function $(sel){ return document.querySelector(sel); }
+function showToast(msg, type) {
+  var c = $('#toasts');
+  if(!c) return;
+  var t = document.createElement('div');
+  t.className = 'toast toast-' + (type||'success');
+  t.innerHTML = '<span class="toast-icon">' + (type==='error'?'❌':'✅') + '</span><span>' + msg + '</span>';
+  c.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transform='translateX(20px)'; setTimeout(function(){ t.remove(); },300); }, 4000);
 }
 
-function alertEl(type, msg) {
-  return el('div', {class: `alert alert-${type}`, text: msg});
-}
-
-async function api(path, opts={}) {
-  const r = await fetch(`${API_BASE}${path}`, {
-    headers: {'Content-Type': 'application/json'},
-    ...opts
-  });
-  const data = await r.json().catch(()=>({}));
-  return {status: r.status, data};
-}
-
-// ===== VIEWS =====
-function render() {
-  const app = $('#app');
+// ===== RENDER =====
+function render(){
+  var app = $('#app');
+  if(!app) return;
   app.innerHTML = '';
-
-  if (state.view === 'register') renderRegister(app);
-  else if (state.view === 'dashboard') renderDashboard(app);
-  else if (state.view === 'edit') renderEdit(app);
+  if(state.view==='register') renderRegister(app);
+  else if(state.view==='dashboard') renderDashboard(app);
   else renderHome(app);
 }
 
-function renderHome(app) {
-  // Check URL for ?key= parameter
-  const params = new URLSearchParams(window.location.search);
-  const key = params.get('key');
-  if (key) {
-    state.apiKey = key;
-    state.view = 'dashboard';
-    loadDashboard(key);
-    return;
-  }
+// ===== HOME =====
+function renderHome(app){
+  var h = document.createElement('div');
+  h.className = 'header';
+  h.innerHTML = '<h1>🔭 Verse Monitor</h1><p>Real-time Star Citizen event alerts. Subscribe to roadmap changes, patch notes, comm-links, and dev posts — filtered for what matters to you.</p>';
+  var pills = document.createElement('div');
+  pills.className = 'features';
+  ['Discord','Slack','Telegram','Real-time','Filtered','Free'].forEach(function(f){
+    var p = document.createElement('span'); p.className = 'feature-pill'; p.textContent = f; pills.appendChild(p);
+  });
+  h.appendChild(pills);
+  app.appendChild(h);
 
-  app.appendChild(el('h1', {}, ['🔭 Verse Monitor']));
-  app.appendChild(el('p', {class: 'subtitle', text: 'Real-time Star Citizen event alerts via webhook. Subscribe to roadmap changes, patch notes, comm-links, and dev posts — filtered for what matters to you.'}));
+  var c1 = document.createElement('div'); c1.className = 'card';
+  c1.innerHTML = '<div class="card-title">🚀 Get Started</div><div class="card-desc">Create a webhook subscription to receive Star Citizen updates in your Discord server, Slack workspace, or any HTTPS endpoint.</div>';
+  var btn1 = document.createElement('button'); btn1.className = 'btn btn-primary btn-lg'; btn1.textContent = 'Create Subscription';
+  btn1.addEventListener('click', function(){ state.view='register'; render(); });
+  c1.appendChild(btn1);
+  app.appendChild(c1);
 
-  app.appendChild(el('div', {class: 'card'}, [
-    el('h2', {}, ['🚀 Get Started']),
-    el('p', {}, ['Create a webhook subscription to receive Star Citizen updates in your Discord server, Slack workspace, or any HTTPS endpoint.']),
-    el('button', {class: 'btn btn-primary', text: 'Create Subscription'}, []).addEventListener('click', () => { state.view='register'; render(); })
-  ]));
-
-  app.appendChild(el('div', {class: 'card'}, [
-    el('h2', {}, ['🔑 Existing Subscription?']),
-    el('div', {class: 'form-group'}, [
-      el('label', {}, ['API Key']),
-      el('input', {id: 'key-input', placeholder: 'Enter your API key to access dashboard'})
-    ]),
-    el('button', {class: 'btn btn-secondary', text: 'Access Dashboard'}, []).addEventListener('click', () => {
-      const key = $('#key-input').value.trim();
-      if (key) { state.apiKey=key; state.view='dashboard'; loadDashboard(key); }
-    })
-  ]));
+  var c2 = document.createElement('div'); c2.className = 'card';
+  c2.innerHTML = '<div class="card-title">🔑 Existing Subscription?</div><div class="card-desc">Enter your API key to access your dashboard.</div>';
+  var input = document.createElement('input'); input.className = 'form-control'; input.placeholder = 'Enter your API key'; input.id = 'key-input';
+  input.addEventListener('keydown', function(e){ if(e.key==='Enter') goDashboard(); });
+  c2.appendChild(input);
+  var btn2 = document.createElement('button'); btn2.className = 'btn btn-secondary btn-sm'; btn2.style.marginTop='12px'; btn2.textContent = 'Access Dashboard';
+  btn2.addEventListener('click', goDashboard);
+  c2.appendChild(btn2);
+  app.appendChild(c2);
 }
 
-function renderRegister(app) {
-  app.appendChild(el('h1', {}, ['🚀 New Subscription']));
-  app.appendChild(el('p', {class: 'subtitle', text: 'Configure your webhook to receive Star Citizen event alerts.'}));
+function goDashboard(){
+  var key = $('#key-input').value.trim();
+  if(key){ state.apiKey=key; state.view='dashboard'; loadDashboard(key); }
+}
 
-  const form = el('div', {class: 'card'});
+// ===== REGISTER =====
+function renderRegister(app){
+  var card = document.createElement('div'); card.className = 'card';
+  card.innerHTML = '<div class="card-title">🚀 New Subscription</div><div class="card-desc">Configure your webhook to receive Star Citizen event alerts.</div>';
 
-  const fields = {};
+  var alertBox = document.createElement('div'); alertBox.className = 'alert alert-error'; alertBox.style.display='none';
+  alertBox.innerHTML = '<span class="icon">⚠️</span><span id="alert-msg"></span>';
+  card.appendChild(alertBox);
 
   // Name
-  const nameGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Project / Channel Name']),
-    fields.name = el('input', {placeholder: 'e.g. StarCitizen FR', required: true})
-  ]);
+  var g1 = document.createElement('div'); g1.className = 'form-group';
+  g1.innerHTML = '<label>Project / Channel Name</label><input class="form-control" id="f-name" placeholder="e.g. StarCitizen FR" required>';
+  card.appendChild(g1);
 
   // Webhook URL
-  const urlGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Webhook URL']),
-    fields.url = el('input', {placeholder: 'https://discord.com/api/webhooks/...', required: true}),
-    el('small', {}, ['Discord, Slack, Telegram Bot API, or any HTTPS webhook endpoint'])
-  ]);
+  var g2 = document.createElement('div'); g2.className = 'form-group';
+  g2.innerHTML = '<label>Webhook URL</label><input class="form-control" id="f-url" placeholder="https://discord.com/api/webhooks/..." required><div class="hint">Discord, Slack, Telegram Bot API, or any HTTPS endpoint</div>';
+  card.appendChild(g2);
 
   // Format
-  const fmtGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Output Format']),
-    fields.format = el('select', {}, [
-      el('option', {value: 'discord', text: 'Discord (embeds)'}),
-      el('option', {value: 'slack', text: 'Slack (Block Kit)'}),
-      el('option', {value: 'telegram', text: 'Telegram (MarkdownV2)'}),
-      el('option', {value: 'generic', text: 'Generic (raw JSON)'})
-    ])
-  ]);
+  var g3 = document.createElement('div'); g3.className = 'form-group';
+  g3.innerHTML = '<label>Output Format</label>';
+  var fmtGrid = document.createElement('div'); fmtGrid.className = 'format-grid';
+  var formats = [{id:'discord',icon:'💬',label:'Discord'},{id:'slack',icon:'📨',label:'Slack'},{id:'telegram',icon:'✈️',label:'Telegram'},{id:'generic',icon:'📦',label:'JSON'}];
+  var selectedFormat = 'discord';
+  formats.forEach(function(f){
+    var fc = document.createElement('div'); fc.className = 'format-card' + (f.id==='discord'?' selected':''); fc.dataset.id = f.id;
+    fc.innerHTML = '<div class="check">✓</div><div class="icon">'+f.icon+'</div><div class="label">'+f.label+'</div>';
+    fc.addEventListener('click', function(){
+      fmtGrid.querySelectorAll('.format-card').forEach(function(c){ c.classList.remove('selected'); });
+      fc.classList.add('selected'); selectedFormat = f.id;
+    });
+    fmtGrid.appendChild(fc);
+  });
+  g3.appendChild(fmtGrid);
+  card.appendChild(g3);
 
   // Priority
-  const priGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Minimum Priority']),
-    fields.priority = el('select', {}, [
-      el('option', {value: 'LOW', text: '🔵 Low — everything'}),
-      el('option', {value: 'MEDIUM', selected: true, text: '🟡 Medium — significant changes'}),
-      el('option', {value: 'HIGH', text: '🟠 High — major updates'}),
-      el('option', {value: 'CRITICAL', text: '🔴 Critical — patches & breaking changes only'})
-    ])
-  ]);
+  var g4 = document.createElement('div'); g4.className = 'form-group';
+  g4.innerHTML = '<label>Minimum Priority</label>';
+  var priSel = document.createElement('div'); priSel.className = 'priority-selector';
+  var priorities = [{id:'LOW',emoji:'🔵',label:'Low — everything'},{id:'MEDIUM',emoji:'🟡',label:'Medium'},{id:'HIGH',emoji:'🟠',label:'High — major'},{id:'CRITICAL',emoji:'🔴',label:'Critical only'}];
+  var selectedPriority = 'MEDIUM';
+  priorities.forEach(function(p){
+    var po = document.createElement('div'); po.className = 'priority-option' + (p.id==='MEDIUM'?' selected':''); po.dataset.id = p.id;
+    po.innerHTML = '<div class="emoji">'+p.emoji+'</div><div class="label">'+p.label+'</div>';
+    po.addEventListener('click', function(){
+      priSel.querySelectorAll('.priority-option').forEach(function(o){ o.classList.remove('selected'); });
+      po.classList.add('selected'); selectedPriority = p.id;
+    });
+    priSel.appendChild(po);
+  });
+  g4.appendChild(priSel);
+  card.appendChild(g4);
 
   // Event types
-  const types = [
-    {value:'roadmap_card_added', label:'🆕 Roadmap cards added'},
-    {value:'roadmap_card_released', label:'✅ Features released'},
-    {value:'roadmap_card_delayed', label:'⚠️ Features delayed'},
-    {value:'roadmap_card_removed', label:'🗑️ Cards removed'},
-    {value:'roadmap_card_updated', label:'📝 Cards updated'},
-    {value:'patch_notes_live', label:'🚨 Patch notes'},
-    {value:'devtracker_post', label:'📌 Dev posts'},
-    {value:'comm_link_published', label:'📰 Comm-Links'},
-    {value:'twisc_published', label:'📋 TWISC'},
-    {value:'monthly_report', label:'📊 Monthly report'}
-  ];
-  const typeCheckboxes = [];
-  const typesGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Event Types']),
-    el('div', {class: 'checkbox-grid'}, types.map(t => {
-      const l = el('label', {}, [
-        typeCheckboxes.push(el('input', {type: 'checkbox', value: t.value, checked: ['roadmap_card_delayed','patch_notes_live','roadmap_card_released','devtracker_post'].includes(t.value)})),
-        document.createTextNode(t.label)
-      ]);
-      return l;
-    }))
-  ]);
+  var g5 = document.createElement('div'); g5.className = 'form-group';
+  g5.innerHTML = '<label>Event Types</label>';
+  var chipGrid = document.createElement('div'); chipGrid.className = 'chip-grid';
+  var eventTypes = [{id:'roadmap_card_added',label:'🆕 Cards added'},{id:'roadmap_card_released',label:'✅ Released'},{id:'roadmap_card_delayed',label:'⚠️ Delayed'},{id:'roadmap_card_removed',label:'🗑️ Removed'},{id:'patch_notes_live',label:'🚨 Patch notes'},{id:'devtracker_post',label:'📌 Dev posts'},{id:'comm_link_published',label:'📰 Comm-Links'},{id:'twisc_published',label:'📋 TWISC'}];
+  var selectedTypes = [];
+  eventTypes.forEach(function(t){
+    var chip = document.createElement('div'); chip.className = 'chip'; chip.textContent = t.label; chip.dataset.id = t.id;
+    chip.addEventListener('click', function(){
+      chip.classList.toggle('selected');
+      var idx = selectedTypes.indexOf(t.id);
+      if(idx>=0) selectedTypes.splice(idx,1); else selectedTypes.push(t.id);
+    });
+    chipGrid.appendChild(chip);
+  });
+  g5.appendChild(chipGrid);
+  card.appendChild(g5);
 
   // Keywords
-  const kwGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Keywords (optional)']),
-    fields.keywords = el('input', {placeholder: 'e.g. Drake, Idris, 4.0, server meshing'}),
-    el('small', {}, ['Comma-separated. Only alerts containing these words will be sent.'])
-  ]);
+  var g6 = document.createElement('div'); g6.className = 'form-group';
+  g6.innerHTML = '<label>Keywords (optional)</label>';
+  var tagsWrap = document.createElement('div'); tagsWrap.className = 'tags-input'; tagsWrap.id = 'tags-wrap';
+  var tagsInput = document.createElement('input'); tagsInput.placeholder = 'Type + Enter to add';
+  var keywords = [];
+  function renderTags(){ tagsWrap.querySelectorAll('.tag').forEach(function(t){ t.remove(); }); keywords.forEach(function(k){ var tag = document.createElement('span'); tag.className = 'tag'; tag.innerHTML = k + '<span class="remove">×</span>'; tag.querySelector('.remove').addEventListener('click', function(){ keywords.splice(keywords.indexOf(k),1); renderTags(); }); tagsWrap.insertBefore(tag, tagsInput); }); }
+  tagsInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); var v=tagsInput.value.trim(); if(v&&keywords.indexOf(v)<0){ keywords.push(v); tagsInput.value=''; renderTags(); } } });
+  tagsWrap.appendChild(tagsInput);
+  g6.appendChild(tagsWrap);
+  g6.appendChild(document.createElement('div')).className = 'hint'; g6.querySelector('.hint').textContent = 'Only alerts containing these words will be sent.';
+  card.appendChild(g6);
 
   // Category
-  const catGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Category']),
-    fields.category = el('select', {}, [
-      el('option', {value: '', text: 'All categories'}),
-      el('option', {value: 'ship', text: 'Ships'}),
-      el('option', {value: 'gameplay', label: 'Gameplay'}),
-      el('option', {value: 'tech', text: 'Technology'}),
-      el('option', {value: 'event', text: 'Events'}),
-      el('option', {value: 'lore', text: 'Lore'})
-    ])
-  ]);
+  var g7 = document.createElement('div'); g7.className = 'form-group';
+  g7.innerHTML = '<label>Category</label><select class="form-control" id="f-cat"><option value="">All categories</option><option value="ship">Ships</option><option value="gameplay">Gameplay</option><option value="tech">Technology</option><option value="event">Events</option><option value="lore">Lore</option></select>';
+  card.appendChild(g7);
 
   // Rate limit
-  const rlGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Rate Limit (alerts/hour)']),
-    fields.rateLimit = el('input', {type: 'number', value: '30', min: '1', max: '100'})
-  ]);
+  var g8 = document.createElement('div'); g8.className = 'form-group';
+  g8.innerHTML = '<label>Rate Limit</label><div class="form-row"><div><input class="form-control" id="f-rate" type="number" value="30" min="1" max="100"></div><div style="display:flex;align-items:center;color:var(--text2);font-size:.9em">alerts / hour</div></div>';
+  card.appendChild(g8);
 
-  const submitBtn = el('button', {class: 'btn btn-primary', text: '🚀 Create Subscription'});
-
-  form.append(nameGroup, urlGroup, fmtGroup, priGroup, typesGroup, kwGroup, catGroup, rlGroup, submitBtn);
-  app.appendChild(form);
-  app.appendChild(el('p', {}, [el('a', {href: '#', text: '← Back to home'}, []).addEventListener('click', (e) => { e.preventDefault(); state.view=null; render(); })]));
-
-  submitBtn.addEventListener('click', async () => {
-    const eventTypes = Array.from(document.querySelectorAll('.checkbox-grid input:checked')).map(cb => cb.value);
-    const payload = {
-      name: fields.name.value.trim(),
-      webhook_url: fields.url.value.trim(),
-      format: fields.format.value,
-      priority_min: fields.priority.value,
-      event_types: eventTypes,
-      keywords: fields.keywords.value.split(',').map(k=>k.trim()).filter(Boolean),
-      category: fields.category.value || null,
-      rate_limit: parseInt(fields.rateLimit.value) || 30
-    };
-    if (!payload.name || !payload.webhook_url) {
-      form.insertBefore(alertEl('error', 'Name and webhook URL are required.'), form.firstChild);
-      return;
-    }
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating...';
-    const {status, data} = await api('/subscriptions', {method:'POST', body: JSON.stringify(payload)});
-    if (status === 201) {
-      // Redirect to dashboard
-      window.history.replaceState({}, '', `?key=${data.api_key}`);
-      state.apiKey = data.api_key;
-      state.view = 'dashboard';
-      loadDashboard(data.api_key);
-    } else {
-      form.insertBefore(alertEl('error', data.detail || data.error || 'Failed to create subscription'), form.firstChild);
-      submitBtn.disabled = false;
-      submitBtn.textContent = '🚀 Create Subscription';
-    }
+  // Submit
+  var submitBtn = document.createElement('button'); submitBtn.className = 'btn btn-primary btn-lg'; submitBtn.textContent = '🚀 Create Subscription';
+  submitBtn.addEventListener('click', function(){
+    var name = $('#f-name').value.trim();
+    var url = $('#f-url').value.trim();
+    if(!name||!url){ showAlert('Name and webhook URL are required.'); return; }
+    if(!url.startsWith('https://')){ showAlert('Webhook URL must start with https://'); return; }
+    submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner"></span> Creating...';
+    api('/subscriptions', {method:'POST', body:JSON.stringify({name:name,webhook_url:url,format:selectedFormat,priority_min:selectedPriority,event_types:selectedTypes,keywords:keywords,category:$('#f-cat').value||null,rate_limit:parseInt($('#f-rate').value)||30})}).then(function(resp){
+      submitBtn.disabled = false; submitBtn.textContent = '🚀 Create Subscription';
+      if(resp.status===201){
+        window.history.replaceState({},'','?key='+resp.data.api_key);
+        state.apiKey = resp.data.api_key;
+        state.view = 'dashboard';
+        loadDashboard(resp.data.api_key);
+      } else {
+        showAlert(resp.data.detail||'Failed to create subscription');
+      }
+    }).catch(function(){ submitBtn.disabled=false; submitBtn.textContent='🚀 Create Subscription'; showAlert('Network error. Please try again.'); });
   });
+  card.appendChild(submitBtn);
+
+  // Back link
+  var back = document.createElement('p'); back.style.marginTop='16px';
+  var backLink = document.createElement('a'); backLink.href='#'; backLink.textContent='← Back to home';
+  backLink.addEventListener('click', function(e){ e.preventDefault(); state.view='home'; render(); });
+  back.appendChild(backLink);
+  card.appendChild(back);
+
+  app.appendChild(card);
+
+  function showAlert(msg){ $('#alert-msg').textContent = msg; alertBox.style.display='flex'; }
 }
 
-async function loadDashboard(key) {
-  const {status, data} = await api(`/subscriptions/${key}`);
-  if (status === 200) {
-    state.sub = data;
-    state.apiKey = key;
-    render();
-  } else {
-    state.view = null;
-    const app = $('#app');
-    app.innerHTML = '';
-    app.appendChild(alertEl('error', 'Invalid API key. Subscription not found.'));
-    app.appendChild(el('p', {}, [el('a', {href: '#', text: '← Back to home'}, []).addEventListener('click', (e) => { e.preventDefault(); state.view=null; render(); })]));
-  }
-}
+// ===== DASHBOARD =====
+function renderDashboard(app){
+  var s = state.sub;
+  if(!s){ app.innerHTML='<div class="loading"><div class="spinner"></div><span>Loading dashboard...</span></div>'; return; }
 
-function renderDashboard(app) {
-  const s = state.sub;
-  if (!s) { app.appendChild(el('div',{id:'loading',text:'Loading...'})); return; }
+  // Header
+  var header = document.createElement('div'); header.className = 'dash-header';
+  header.innerHTML = '<h1>📊 '+s.name+'</h1><span class="badge '+(s.active?'badge-active':'badge-inactive')+'"><span class="badge-dot"></span>'+(s.active?'Active':'Inactive')+'</span>';
+  app.appendChild(header);
 
-  app.appendChild(el('h1', {}, ['📊 Dashboard']));
-  app.appendChild(el('div', {class: 'header-row'}, [
-    el('span', {}, [el('strong', {}, s.name)]),
-    el('span', {class: `badge badge-${s.active?'active':'inactive'}`, text: s.active ? '🟢 Active' : '🔴 Inactive'})
-  ]));
+  // API Key
+  var keyCard = document.createElement('div'); keyCard.className = 'card';
+  keyCard.innerHTML = '<div class="card-title">🔑 API Key</div><div class="card-desc">Keep this key secret. Use it to access your dashboard.</div>';
+  var keyBox = document.createElement('div'); keyBox.className = 'key-box';
+  keyBox.innerHTML = '<span class="key">'+(s.api_key||state.apiKey)+'</span>';
+  var copyBtn = document.createElement('button'); copyBtn.className = 'btn btn-secondary btn-sm copy-btn'; copyBtn.textContent = '📋 Copy';
+  copyBtn.addEventListener('click', function(){ navigator.clipboard.writeText(state.apiKey); showToast('API key copied!'); });
+  keyBox.appendChild(copyBtn);
+  keyCard.appendChild(keyBox);
+  app.appendChild(keyCard);
 
-  // API Key section
-  const keySection = el('div', {class: 'card'}, [
-    el('h2', {}, ['🔑 API Key']),
-    el('div', {class: 'api-key-box'}, [
-      el('span', {class: 'key'}, s.api_key || state.apiKey)
-    ]),
-    el('button', {class: 'btn btn-secondary copy-btn', text: '📋 Copy'}, []).addEventListener('click', () => {
-      navigator.clipboard.writeText(state.apiKey);
-    })
-  ]);
+  // Stats
+  var statsCard = document.createElement('div'); statsCard.className = 'card';
+  statsCard.innerHTML = '<div class="card-title">📈 Stats</div>';
+  var statsGrid = document.createElement('div'); statsGrid.className = 'stats-grid';
+  statsGrid.innerHTML = '<div class="stat-card"><div class="value">'+s.total_deliveries+'</div><div class="label">Delivered</div></div><div class="stat-card"><div class="value" style="color:'+(s.failure_count>0?'var(--red)':'var(--green)')+'">'+s.failure_count+'</div><div class="label">Failures</div></div><div class="stat-card"><div class="value">'+s.rate_limit+'/hr</div><div class="label">Rate Limit</div></div>';
+  statsCard.appendChild(statsGrid);
+  app.appendChild(statsCard);
 
-  // Stats section
-  const statsSection = el('div', {class: 'card'}, [
-    el('h2', {}, ['📈 Stats']),
-    el('div', {class: 'dashboard-stats'}, [
-      statBox(s.total_deliveries, 'Total Delivered'),
-      statBox(s.failure_count, 'Failures'),
-      statBox(`${s.rate_limit}/hr`, 'Rate Limit')
-    ])
-  ]);
-
-  // Config summary
-  const eventTypesPreview = s.event_types && s.event_types.length ? s.event_types.join(', ') : 'All';
-  const keywordsPreview = s.keywords && s.keywords.length ? s.keywords.join(', ') : 'None';
-  const configSection = el('div', {class: 'card'}, [
-    el('h2', {}, ['⚙️ Configuration']),
-    el('ul', {class: 'event-list'}, [
-      li('Priority', `≥ ${s.priority_min}`),
-      li('Event Types', eventTypesPreview),
-      li('Keywords', keywordsPreview),
-      li('Category', s.category || 'All'),
-      li('Format', s.format),
-      li('Created', new Date(s.created_at).toLocaleString()),
-      li('Last Delivery', s.last_delivery ? new Date(s.last_delivery).toLocaleString() : 'Never')
-    ])
-  ]);
+  // Config
+  var configCard = document.createElement('div'); configCard.className = 'card';
+  configCard.innerHTML = '<div class="card-title">⚙️ Configuration</div>';
+  var ul = document.createElement('ul'); ul.className = 'config-list';
+  function li(k,v){ var node = document.createElement('li'); node.innerHTML = '<span class="key">'+k+'</span><span class="value">'+v+'</span>'; return node; }
+  ul.appendChild(li('Priority','≥ '+s.priority_min));
+  ul.appendChild(li('Event Types',(s.event_types&&s.event_types.length)?s.event_types.join(', '):'All'));
+  ul.appendChild(li('Keywords',(s.keywords&&s.keywords.length)?s.keywords.join(', '):'None'));
+  ul.appendChild(li('Category',s.category||'All'));
+  ul.appendChild(li('Format',s.format));
+  ul.appendChild(li('Created',new Date(s.created_at).toLocaleString()));
+  ul.appendChild(li('Last Delivery',s.last_delivery?new Date(s.last_delivery).toLocaleString():'Never'));
+  configCard.appendChild(ul);
+  app.appendChild(configCard);
 
   // Actions
-  const actionsSection = el('div', {class: 'card'}, [
-    el('div', {class: 'header-row'}, [
-      el('span', {}, [el('strong', {}, ['Actions'])]),
-      el('div', {}, [
-        el('button', {class: 'btn btn-secondary', text: '🧪 Test Ping'}, []).addEventListener('click', async () => {
-          await api(`/subscriptions/${state.apiKey}/test`, {method:'POST'});
-          alert('Test ping sent! Check your webhook endpoint.');
-        }),
-        el('button', {class: 'btn btn-secondary', text: '✏️ Edit'}, []).addEventListener('click', () => { state.view='edit'; render(); }),
-        el('button', {class: 'btn btn-danger', text: '🗑️ Delete'}, []).addEventListener('click', async () => {
-          if (confirm('Delete this subscription? This cannot be undone.')) {
-            await api(`/subscriptions/${state.apiKey}`, {method:'DELETE'});
-            window.history.replaceState({}, '', '/');
-            state = {view:null, apiKey:null, sub:null};
-            render();
-          }
-        })
-      ])
-    ])
-  ]);
+  var actionsCard = document.createElement('div'); actionsCard.className = 'card';
+  actionsCard.innerHTML = '<div class="card-title">Actions</div>';
+  var actions = document.createElement('div'); actions.className = 'actions';
 
-  app.append(keySection, statsSection, configSection, actionsSection);
-  app.appendChild(el('p', {}, [el('a', {href: '#', text: '← Back to home'}, []).addEventListener('click', (e) => { e.preventDefault(); window.history.replaceState({}, '', '/'); state={view:null,apiKey:null,sub:null}; render(); })]));
+  var testBtn = document.createElement('button'); testBtn.className = 'btn btn-secondary btn-sm'; testBtn.textContent = '🧪 Test Ping';
+  testBtn.addEventListener('click', function(){ testBtn.disabled=true; api('/subscriptions/'+state.apiKey+'/test',{method:'POST'}).then(function(){ showToast('Test ping sent!'); testBtn.disabled=false; }).catch(function(){ showToast('Failed to send test','error'); testBtn.disabled=false; }); });
+  actions.appendChild(testBtn);
+
+  var delBtn = document.createElement('button'); delBtn.className = 'btn btn-danger btn-sm'; delBtn.textContent = '🗑️ Delete';
+  delBtn.addEventListener('click', function(){
+    showModal('Delete Subscription','Are you sure? This will permanently delete your subscription and stop all alerts.', function(){
+      api('/subscriptions/'+state.apiKey,{method:'DELETE'}).then(function(){
+        window.history.replaceState({},'','/');
+        state = {view:'home',apiKey:null,sub:null};
+        render();
+        showToast('Subscription deleted');
+      });
+    });
+  });
+  actions.appendChild(delBtn);
+
+  actionsCard.appendChild(actions);
+  app.appendChild(actionsCard);
+
+  // Back
+  var backP = document.createElement('p');
+  var backLink = document.createElement('a'); backLink.href='#'; backLink.textContent='← Back to home';
+  backLink.addEventListener('click', function(e){ e.preventDefault(); window.history.replaceState({},'','/'); state={view:'home',apiKey:null,sub:null}; render(); });
+  backP.appendChild(backLink);
+  app.appendChild(backP);
 }
 
-function renderEdit(app) {
-  const s = state.sub;
-  if (!s) return;
+// ===== API =====
+function api(path, opts){
+  opts = opts||{};
+  opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  return fetch(API_BASE+path, opts).then(function(r){
+    return r.json().then(function(d){ return {status:r.status,data:d}; });
+  });
+}
 
-  app.appendChild(el('h1', {}, ['✏️ Edit Subscription']));
-  app.appendChild(el('p', {class: 'subtitle', text: 'Update your webhook configuration.'}));
-
-  const form = el('div', {class: 'card'});
-
-  // Webhook URL
-  const urlGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Webhook URL']),
-    el('input', {id: 'edit-url', value: s.webhook_url, required: true})
-  ]);
-
-  // Format
-  const fmtGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Output Format']),
-    el('select', {id: 'edit-format'}, ['discord','slack','telegram','generic'].map(f =>
-      el('option', {value: f, selected: s.format===f, text: f.charAt(0).toUpperCase()+f.slice(1)})
-    ))
-  ]);
-
-  // Priority
-  const priGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Minimum Priority']),
-    el('select', {id: 'edit-priority'}, ['LOW','MEDIUM','HIGH','CRITICAL'].map(p =>
-      el('option', {value: p, selected: s.priority_min===p, text: p})
-    ))
-  ]);
-
-  // Rate limit
-  const rlGroup = el('div', {class: 'form-group'}, [
-    el('label', {}, ['Rate Limit (alerts/hour)']),
-    el('input', {id: 'edit-rate', type: 'number', value: s.rate_limit, min: '1', max: '100'})
-  ]);
-
-  const saveBtn = el('button', {class: 'btn btn-primary', text: '💾 Save Changes'});
-  const cancelBtn = el('button', {class: 'btn btn-secondary', text: '← Cancel'});
-
-  form.append(urlGroup, fmtGroup, priGroup, rlGroup, saveBtn, cancelBtn);
-  app.appendChild(form);
-
-  cancelBtn.addEventListener('click', () => { state.view='dashboard'; render(); });
-  saveBtn.addEventListener('click', async () => {
-    const payload = {
-      webhook_url: $('#edit-url').value.trim(),
-      format: $('#edit-format').value,
-      priority_min: $('#edit-priority').value,
-      rate_limit: parseInt($('#edit-rate').value) || 30
-    };
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-    const {status, data} = await api(`/subscriptions/${state.apiKey}`, {method:'PATCH', body: JSON.stringify(payload)});
-    if (status === 200) {
-      state.sub = {...state.sub, ...data};
-      state.view = 'dashboard';
-      render();
+function loadDashboard(key){
+  api('/subscriptions/'+key).then(function(resp){
+    if(resp.status===200){
+      state.sub = resp.data; state.apiKey = key; render();
     } else {
-      form.insertBefore(alertEl('error', data.detail || 'Failed to update'), form.firstChild);
-      saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Save Changes';
+      state.view = 'home';
+      var app = $('#app');
+      app.innerHTML = '';
+      var err = document.createElement('div'); err.className = 'alert alert-error'; err.innerHTML = '<span class="icon">⚠️</span><span>Invalid API key. Subscription not found.</span>';
+      app.appendChild(err);
+      var back = document.createElement('p');
+      var backLink = document.createElement('a'); backLink.href='#'; backLink.textContent='← Back to home';
+      backLink.addEventListener('click', function(e){ e.preventDefault(); state.view='home'; render(); });
+      back.appendChild(backLink);
+      app.appendChild(back);
     }
   });
 }
 
-function statBox(number, label) {
-  return el('div', {class: 'stat-box'}, [
-    el('div', {class: 'number'}, String(number)),
-    el('div', {class: 'label'}, label)
-  ]);
-}
-
-function li(label, value) {
-  return el('li', {}, [el('strong', {}, `${label}: `), document.createTextNode(value)]);
+// ===== MODAL =====
+function showModal(title, body, onConfirm){
+  var overlay = document.createElement('div'); overlay.className = 'modal-overlay';
+  overlay.innerHTML = '<div class="modal"><h3>'+title+'</h3><p>'+body+'</p><div class="modal-actions"><button class="btn btn-secondary btn-sm" id="modal-cancel">Cancel</button><button class="btn btn-danger btn-sm" id="modal-confirm">Delete</button></div></div>';
+  document.body.appendChild(overlay);
+  $('#modal-cancel').addEventListener('click', function(){ overlay.remove(); });
+  $('#modal-confirm').addEventListener('click', function(){ overlay.remove(); onConfirm(); });
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
 }
 
 // ===== INIT =====
-render();
+var params = new URLSearchParams(window.location.search);
+var key = params.get('key');
+if(key){ state.apiKey=key; state.view='dashboard'; loadDashboard(key); }
+else { render(); }
+
+})();
 </script>
 </body>
 </html>
