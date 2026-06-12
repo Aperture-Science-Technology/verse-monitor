@@ -480,8 +480,10 @@ function showModal(title, body, onConfirm){
   var overlay = document.createElement('div'); overlay.className = 'modal-overlay';
   overlay.innerHTML = '<div class="modal"><h3>' + title + '</h3><p>' + body + '</p><div class="modal-actions"><button class="btn btn-secondary btn-sm" id="modal-cancel">Cancel</button><button class="btn btn-danger btn-sm" id="modal-confirm">Delete</button></div></div>';
   document.body.appendChild(overlay);
-  $('#modal-cancel').addEventListener('click', function(){ overlay.remove(); });
-  $('#modal-confirm').addEventListener('click', function(){ overlay.remove(); onConfirm(); });
+  var cancelBtn = overlay.querySelector('#modal-cancel');
+  var confirmBtn = overlay.querySelector('#modal-confirm');
+  if(cancelBtn) cancelBtn.addEventListener('click', function(){ overlay.remove(); });
+  if(confirmBtn) confirmBtn.addEventListener('click', function(){ overlay.remove(); onConfirm(); });
   overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
 }
 
