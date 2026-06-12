@@ -35,19 +35,11 @@ Built and maintained by **GLaDOS** — the autonomous AI research director at Ap
 │                                                                     │
 │  ┌──────────┐      ┌──────────────┐      ┌───────────────────┐     │
 │  │  Redis   │      │   Qdrant     │      │   OpenRouter      │     │
-│  │ (cache + │      │ (vectors DB) │      │ (embeddings +     │     │
-│  │  state)  │      │  ~3,334 chunks│     │  crawl detection) │     │
+│  │ (cache + │      │ (vectors DB) │      │ (embeddings)      │     │
+│  │  state)  │      │              │      │                   │     │
 │  └──────────┘      └──────────────┘      └───────────────────┘     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
-
-### Services
-
-| Service | Port | Domain | Description |
-|---------|------|--------|-------------|
-| `verse-mcp` | 8000 | `verse-mcp.aperture-agency.org` | MCP server — semantic search, ship stats, lore, guides, events, dev posts |
-| `verse-monitor` | — | *(internal)* | Background worker — polls Star Citizen sources, formats alerts, dispatches via webhooks |
-| `verse-monitor-portal` | 8080 | `verse-monitor.aperture-agency.org` | Self-service webhook subscription portal (FastAPI + vanilla HTML/JS) |
 
 **Note:** The MCP server does NOT perform LLM synthesis. It returns raw context chunks to the MCP client, which uses its own LLM to generate the final answer.
 
@@ -55,7 +47,7 @@ Built and maintained by **GLaDOS** — the autonomous AI research director at Ap
 
 - **Semantic search** — Ask questions in natural language, get answers with source citations
 - **8 MCP tools** — Ships, lore, guides, events, roadmap diffs, dev posts, event context, general Q&A
-- **Smart caching** — Redis-backed embedding cache (~65% hit rate on repeated questions)
+- **Smart caching** — Redis-backed embedding cache for repeated queries
 - **Real-time monitoring** — Automated polling of Star Citizen Wiki, Comm-Links, Spectrum
 - **Self-service webhooks** — Subscribe via web UI, get alerts on Discord, Telegram, Slack
 - **Multi-format alerting** — Slack Block Kit, Telegram MarkdownV2, Discord embeds, generic JSON
@@ -80,7 +72,7 @@ Built and maintained by **GLaDOS** — the autonomous AI research director at Ap
 ## Tech Stack
 
 - **Runtime:** Python 3.12, FastMCP 3.4 (standalone), asyncio, FastAPI
-- **Vector DB:** Qdrant (with API key auth) — ~3,334 chunks
+- **Vector DB:** Qdrant (with API key auth)
 - **Cache & State:** Redis (embedding cache + webhook registry)
 - **Embeddings:** OpenRouter (`text-embedding-3-small`, 1536 dimensions)
 - **Transport:** Streamable HTTP (stateless) via FastMCP
@@ -90,7 +82,7 @@ Built and maintained by **GLaDOS** — the autonomous AI research director at Ap
 
 ## Webhook Portal
 
-The self-service portal at `verse-monitor.aperture-agency.org` lets anyone subscribe to Star Citizen alerts:
+The self-service portal lets anyone subscribe to Star Citizen alerts:
 
 1. **Register** — Choose name, webhook URL, formats, and keyword filters
 2. **Get API key** — Use it to manage your subscription via REST or web UI
