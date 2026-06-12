@@ -518,8 +518,13 @@ function showApiKeyModal(){
   submitBtn.className = 'btn btn-primary btn-sm';
   submitBtn.textContent = 'Access';
 
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'api-key-modal-close';
+  closeBtn.textContent = '✕';
+
   actions.appendChild(cancelBtn);
   actions.appendChild(submitBtn);
+  modal.appendChild(closeBtn);
   modal.appendChild(heading);
   modal.appendChild(desc);
   modal.appendChild(input);
@@ -538,8 +543,12 @@ function showApiKeyModal(){
   }
 
   cancelBtn.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
   submitBtn.addEventListener('click', submitApiKey);
-  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submitApiKey(); });
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') submitApiKey();
+    if(e.key === 'Escape') close();
+  });
   overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
 }
 
