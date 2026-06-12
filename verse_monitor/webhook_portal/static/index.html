@@ -367,13 +367,195 @@ select.form-control {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+/* ═══ LAYOUT: PAGE STRUCTURE ═══ */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* TOPNAV */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 40px;
+}
+.topnav-logo {
+  font-size: .85em;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: -.01em;
+}
+.topnav-logo em { color: var(--accent2); font-style: normal; }
+.topnav-links { display: flex; gap: 18px; align-items: center; }
+.topnav-links a, .topnav-links button {
+  font-size: .8em;
+  color: var(--text3);
+  background: none; border: none; cursor: pointer;
+  text-decoration: none; transition: color .15s; font-family: inherit;
+}
+.topnav-links a:hover, .topnav-links button:hover { color: var(--text); }
+
+/* MAIN CONTENT */
+.page-content { flex: 1; padding-bottom: 48px; }
+
+/* HERO */
+.hero { text-align: center; padding: 24px 0 48px; }
+.hero-badge {
+  display: inline-block;
+  background: rgba(94,106,210,.1);
+  border: 1px solid rgba(94,106,210,.25);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: .72em;
+  font-weight: 510;
+  color: var(--accent2);
+  margin-bottom: 18px;
+  letter-spacing: .02em;
+}
+.hero-title {
+  font-size: 2.2em;
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+.hero-subtitle {
+  font-size: .95em;
+  color: var(--text3);
+  max-width: 500px;
+  margin: 0 auto 24px;
+  line-height: 1.6;
+}
+.hero-cta { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.hero-cta-hint { font-size: .72em; color: var(--text3); }
+.btn-xl { padding: 12px 26px; font-size: .95em; }
+
+/* PLATFORMS */
+.platforms {
+  text-align: center;
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 40px;
+}
+.platforms-label { font-size: .7em; color: var(--text3); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .06em; }
+.platforms-logos {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.plogo { display: flex; align-items: center; gap: 5px; font-size: .78em; color: var(--text3); }
+.plogo svg { width: 16px; height: 16px; }
+
+/* TWO-COL CARDS */
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 48px;
+}
+@media (max-width: 600px) { .cards-row { grid-template-columns: 1fr; } }
+.card-feature { padding: 24px; }
+.card-feature .card-icon { font-size: 1.6em; margin-bottom: 10px; }
+.card-feature h3 { font-size: 1em; font-weight: 600; margin-bottom: 6px; }
+.card-feature p { font-size: .85em; color: var(--text3); margin-bottom: 14px; line-height: 1.55; }
+.card-feature input { margin-bottom: 10px; }
+
+/* FEATURES GRID */
+.feat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 600px) { .feat-grid { grid-template-columns: 1fr; } }
+.feat-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+}
+.feat-icon { font-size: 1.3em; margin-bottom: 6px; }
+.feat-item h4 { font-size: .85em; font-weight: 600; margin-bottom: 3px; }
+.feat-item p { font-size: .78em; color: var(--text3); line-height: 1.5; }
+
+/* SECTION HEAD */
+.section-head { font-size: 1.15em; font-weight: 600; text-align: center; margin-bottom: 8px; letter-spacing: -.01em; }
+
+/* BACK LINK */
+.back-link {
+  display: inline-block;
+  font-size: .8em;
+  color: var(--text3);
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+.back-link:hover { color: var(--text); }
+
+/* FORM / DASH PAGES */
+.form-page-header h2 { font-size: 1.25em; font-weight: 600; margin: 6px 0 4px; }
+.form-page-header p { font-size: .85em; color: var(--text3); margin-bottom: 20px; }
+
+/* FOOTER */
+.page-footer {
+  text-align: center;
+  padding: 24px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: .72em;
+  color: var(--text3);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+@media (max-width: 600px) { .page-footer { flex-direction: column; } }
 </style>
 </head>
 <body>
 
+<!-- TOASTS -->
 <div class="toast-container" id="toasts"></div>
-<div id="app">
-  <div class="loading"><div class="spinner"></div><span>Loading…</span></div>
+
+<!-- PAGE WRAPPER -->
+<div class="page-wrapper">
+
+  <!-- TOPNAV -->
+  <nav class="topnav">
+    <a href="/" class="topnav-logo">Verse <em>Monitor</em></a>
+    <div class="topnav-links">
+      <a href="#" id="nav-home">Home</a>
+      <button id="nav-dash-btn" type="button">Dashboard</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="page-content">
+    <div id="app">
+      <div class="loading"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="page-footer">
+    <span>Verse Monitor — Star Citizen Intelligence</span>
+    <span>Real-time alerts, delivered.</span>
+  </footer>
+
 </div>
 
 <script>
@@ -441,64 +623,86 @@ function render(){
 
 // ── HOME ──
 function renderHome(app){
-  // Header
-  var header = document.createElement('div');
-  header.className = 'header';
-  header.innerHTML =
-    '<h1>🔭 Verse Monitor</h1>' +
-    '<p>Real-time Star Citizen event alerts delivered to your Discord server, Slack workspace, or any HTTPS webhook.</p>';
-  var pills = document.createElement('div');
-  pills.className = 'badges';
-  ['Discord','Slack','Telegram','Real-time','Keyword filters','Free'].forEach(function(t){
-    var s = document.createElement('span'); s.className = 'badge-pill'; s.textContent = t; pills.appendChild(s);
-  });
-  header.appendChild(pills);
-  app.appendChild(header);
+  app.innerHTML = '';
 
-  // Two-column layout
+  // Hero
+  var hero = document.createElement('div');
+  hero.className = 'hero';
+  hero.innerHTML =
+    '<div class="hero-badge">🧪 Star Citizen Intelligence</div>' +
+    '<h1 class="hero-title">Real-time alerts for&nbsp;Star&nbsp;Citizen</h1>' +
+    '<p class="hero-subtitle">Track roadmap changes, patch notes, Comm-Links, and dev posts — delivered to your Discord, Slack, or Telegram in real-time.</p>' +
+    '<div class="hero-cta">' +
+      '<button class="btn btn-primary btn-xl" id="hero-cta">Create Subscription</button>' +
+      '<span class="hero-cta-hint">Free · No account needed · Takes 30 seconds</span>' +
+    '</div>';
+  app.appendChild(hero);
+  $('#hero-cta').addEventListener('click', function(){ state.view='register'; render(); });
+
+  // Platform logos
+  var platforms = document.createElement('div');
+  platforms.className = 'platforms';
+  platforms.innerHTML =
+    '<p class="platforms-label">Delivered to your platform</p>' +
+    '<div class="platforms-logos">' +
+      '<span class="plogo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.031.057a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg> Discord</span>' +
+      '<span class="plogo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52z" fill="#E01E5A"/><path d="M6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z" fill="#E01E5A"/><path d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834z" fill="#36C5F0"/><path d="M8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" fill="#36C5F0"/><path d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834z" fill="#2EB67D"/><path d="M17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z" fill="#2EB67D"/><path d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52z" fill="#ECB22E"/><path d="M15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" fill="#ECB22E"/></svg> Slack</span>' +
+      '<span class="plogo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#26A5E4"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg> Telegram</span>' +
+      '<span class="plogo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a8f98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Webhook</span>' +
+    '</div>';
+  app.appendChild(platforms);
+
+  // Two-col cards
   var grid = document.createElement('div');
-  grid.className = 'home-grid';
+  grid.className = 'cards-row';
 
-  // Left: Create
-  var cCreate = document.createElement('div');
-  cCreate.className = 'card';
-  cCreate.style.animationDelay = '0.05s';
-  cCreate.innerHTML =
-    '<div class="card-title">🚀 Create Subscription</div>' +
-    '<div class="card-desc">Get Star Citizen updates — roadmap changes, patch notes, Comm-Links, dev posts — delivered to your channel in real-time.</div>';
-  var btnCreate = document.createElement('button');
-  btnCreate.className = 'btn btn-primary btn-lg';
-  btnCreate.textContent = 'Get Started';
-  btnCreate.addEventListener('click', function(){ state.view = 'register'; render(); });
-  cCreate.appendChild(btnCreate);
-  grid.appendChild(cCreate);
+  var c1 = document.createElement('div');
+  c1.className = 'card card-feature';
+  c1.innerHTML =
+    '<div class="card-icon">🚀</div>' +
+    '<h3>Get Started</h3>' +
+    '<p>Create a webhook subscription with filters for the events you care about.</p>' +
+    '<button class="btn btn-primary" id="home-create-btn">Create Subscription →</button>';
+  grid.appendChild(c1);
+  $('#home-create-btn').addEventListener('click', function(){ state.view='register'; render(); });
 
-  // Right: Existing key
-  var cExisting = document.createElement('div');
-  cExisting.className = 'card';
-  cExisting.style.animationDelay = '0.1s';
-  cExisting.innerHTML =
-    '<div class="card-title">🔑 Existing Subscription</div>' +
-    '<div class="card-desc">Enter your API key to access your dashboard, view stats, or make changes.</div>';
-  var inputKey = document.createElement('input');
-  inputKey.className = 'form-control';
-  inputKey.placeholder = 'vms_…';
-  inputKey.id = 'key-input';
-  inputKey.addEventListener('keydown', function(e){ if(e.key==='Enter') goDashboard(); });
-  cExisting.appendChild(inputKey);
-  var btnDash = document.createElement('button');
-  btnDash.className = 'btn btn-secondary btn-sm';
-  btnDash.style.marginTop = '10px';
-  btnDash.textContent = 'Access Dashboard';
-  btnDash.addEventListener('click', goDashboard);
-  cExisting.appendChild(btnDash);
-  grid.appendChild(cExisting);
+  var c2 = document.createElement('div');
+  c2.className = 'card card-feature';
+  c2.innerHTML =
+    '<div class="card-icon">🔑</div>' +
+    '<h3>Existing Subscription</h3>' +
+    '<p>Manage your webhook, view delivery stats, or update filters.</p>' +
+    '<input class="form-control" placeholder="Enter your API key" id="home-key-input">' +
+    '<button class="btn btn-secondary" id="home-dash-btn">Access Dashboard →</button>';
+  grid.appendChild(c2);
+  $('#home-dash-btn').addEventListener('click', goDashboard);
+  $('#home-key-input').addEventListener('keydown', function(e){ if(e.key==='Enter') goDashboard(); });
 
   app.appendChild(grid);
+
+  // Features grid
+  var featSection = document.createElement('div');
+  featSection.innerHTML = '<h2 class="section-head">Why Verse Monitor?</h2>';
+  var featGrid = document.createElement('div');
+  featGrid.className = 'feat-grid';
+  var feats = [
+    {icon:'⚡', title:'Real-time', desc:'Polls Star Citizen sources every few minutes'},
+    {icon:'🎯', title:'Filtered', desc:'Only get alerts that match your keywords and priorities'},
+    {icon:'🛡️', title:'Rate Limited', desc:'Built-in rate limiting prevents channel spam'},
+    {icon:'🔧', title:'Multi-format', desc:'Discord, Slack, Telegram, or raw JSON webhooks'},
+  ];
+  feats.forEach(function(f){
+    var item = document.createElement('div');
+    item.className = 'feat-item';
+    item.innerHTML = '<div class="feat-icon">'+f.icon+'</div><h4>'+f.title+'</h4><p>'+f.desc+'</p>';
+    featGrid.appendChild(item);
+  });
+  featSection.appendChild(featGrid);
+  app.appendChild(featSection);
 }
 
 function goDashboard(){
-  var key = ($('#key-input')||{}).value;
+  var key = ($('#home-key-input')||{}).value || ($('#key-input')||{}).value;
   if(key && key.trim()){ state.apiKey = key.trim(); state.view = 'dashboard'; loadDashboard(key.trim()); }
 }
 
@@ -847,10 +1051,22 @@ function showModal(title, body, onConfirm){
   overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
 }
 
+// ── NAV ──
+$('#nav-home').addEventListener('click', function(e){
+  e.preventDefault();
+  window.history.replaceState({},'','/');
+  state = {view:'home',apiKey:null,sub:null};
+  render();
+});
+$('#nav-dash-btn').addEventListener('click', function(){
+  var key = prompt('Enter your API key:');
+  if(key && key.trim()){ state.apiKey = key.trim(); state.view = 'dashboard'; loadDashboard(key.trim()); }
+});
+
 // ── INIT ──
 var params = new URLSearchParams(window.location.search);
 var key = params.get('key');
-if(key){ state.apiKey = key; state.view = 'dashboard'; loadDashboard(key); }
+if(key){ state.apiKey=key; state.view='dashboard'; loadDashboard(key); }
 else { render(); }
 
 })();
