@@ -35,6 +35,7 @@ from verse_mcp.constants import (
     REDIS_TTL_SECONDS,
     QDRANT_TIMEOUT,
 )
+from ingestion.chunking import semantic_chunk_text
 
 # ---------------------------------------------------------------------------
 # Configuration (read from env vars at runtime)
@@ -60,7 +61,7 @@ RATE_LIMIT_DELAY = 0.2  # seconds between API calls
 
 # Chunking
 CHUNK_SIZE = 600
-CHUNK_OVERLAP = 100
+CHUNK_OVERLAP = 2
 
 # Ingestion sources: (endpoint, category, content_extractor_name)
 # Each source defines how to extract searchable text from its items
@@ -348,19 +349,8 @@ def get_content_extractor(endpoint: str):
 # ---------------------------------------------------------------------------
 
 def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """Split text into overlapping chunks."""
-    if len(text) <= size:
-        return [text] if text.strip() else []
-
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + size
-        chunk = text[start:end].strip()
-        if chunk:
-            chunks.append(chunk)
-        start += size - overlap
-    return chunks
+    """Legacy wrapper — delegates to semantic_chunk_text.  Kept for backward compatibility."""
+    return semantic_chunk_text(text, target_size=size, overlap_sentences=overlap)
 
 
 # ---------------------------------------------------------------------------

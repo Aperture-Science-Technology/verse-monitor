@@ -1,11 +1,6 @@
-"""Stockage Qdrant : collection sc_events pour les événements RSI.
-
-Vecteurs dummy (dim=3) — la valeur est dans les payload/filtres, pas la similarité.
-Index payload sur : type, priority, source, category, timestamp_ts, keywords.
-"""
-
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -14,67 +9,150 @@ from qdrant_client.http import models
 
 from verse_monitor.config import settings
 from verse_monitor.models import Priority, SCEvent
+from verse_mcp.services.embeddings import generate_embedding
 
 logger = logging.getLogger(__name__)
 
-DUMMY_VECTOR = [0.0, 0.0, 0.0]
+EMBEDDING_DIMENSIONS = 1536
 COLLECTION = settings.QDRANT_COLLECTION
 
 
-def get_qdrant_client() -> QdrantClient:
-    """Crée un client Qdrant."""
-    return QdrantClient(
-        url=settings.QDRANT_URL,
-        api_key=settings.QDRANT_API_KEY or None,
-        timeout=10,
+def build_embedding_text(event: SCEvent) -> str:
+    diff_lines = "\n".join(f"  {k}: {v}" for k, v in event.diff.items())
+    return (
+        f"Star Citizen {event.type.value} event:\n"
+        f"Title: {event.title}\n"
+        f"Category: {event.category or 'unknown'}\n"
+        f"Priority: {event.priority.value}\n"
+        f"Source: {event.source}\n"
+        f"Author: {event.author or 'CIG'}\n"
+        f"Keywords: {', '.join(event.keywords)}\n"
+        f"Patch Version: {event.patch_version or 'N/A'}\n"
+        f"Diff:\n{diff_lines}\n"
+        f"URL: {event.url}"
     )
 
 
-async def ensure_collection(qdrant_client: QdrantClient) -> None:
-    """Crée la collection sc_events si absente, vérifie la dimension si existante."""
-    from qdrant_client.http import models as qm
+class QdrantStore:
+    def __init__(self) -> None:
+        self._client = QdrantClient(
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY or None,
+        )
 
-    collections = [c.name for c in qdrant_client.get_collections().collections]
-    if COLLECTION in collections:
-        info = qdrant_client.get_collection(COLLECTION)
-        dim = info.config.params.vectors.size
-        if dim != len(DUMMY_VECTOR):
-            logger.warning(
-                f"Collection {COLLECTION} existe avec dim={dim}, attendu={len(DUMMY_VECTOR)}. "
-                "Ne supprime pas automatiquement — l'opérateur doit décider."
-            )
-        return
+    def ensure_collection(self) -> None:
+        existing = [c.name for c in self._client.get_collections().collections]
+        if COLLECTION in existing:
+            info = self._client.get_collection(COLLECTION)
+            dim = info.config.params.vectors.size
+            if dim != EMBEDDING_DIMENSIONS:
+                logger.warning(
+                    "Collection '%s' has dimension %d but expected %d. "
+                    "Please manually delete and recreate the collection to use real embeddings.",
+                    COLLECTION,
+                    dim,
+                    EMBEDDING_DIMENSIONS,
+                )
+            return
 
-    qdrant_client.create_collection(
-        collection_name=COLLECTION,
-        vectors_config=qm.VectorParams(size=len(DUMMY_VECTOR), distance=qm.Distance.COSINE),
-    )
-    qdrant_client.create_payload_index(COLLECTION, field_name="type", field_type="keyword")
-    qdrant_client.create_payload_index(COLLECTION, field_name="priority", field_type="keyword")
-    qdrant_client.create_payload_index(COLLECTION, field_name="source", field_type="keyword")
-    qdrant_client.create_payload_index(COLLECTION, field_name="category", field_type="keyword")
-    qdrant_client.create_payload_index(COLLECTION, field_name="timestamp_ts", field_type="float")
-    qdrant_client.create_payload_index(COLLECTION, field_name="keywords", field_type="keyword")
-    logger.info(f"Collection {COLLECTION} créée")
+        self._client.create_collection(
+            collection_name=COLLECTION,
+            vectors_config=models.VectorParams(
+                size=EMBEDDING_DIMENSIONS,
+                distance=models.Distance.COSINE,
+            ),
+        )
+        logger.info("Created Qdrant collection '%s' (dim=%d)", COLLECTION, EMBEDDING_DIMENSIONS)
+
+    async def store_event(self, event: SCEvent) -> None:
+        text = build_embedding_text(event)
+        vector = await generate_embedding(text)
+
+        payload: dict[str, Any] = {
+            "id": event.id,
+            "type": event.type.value,
+            "priority": event.priority.value,
+            "source": event.source,
+            "title": event.title,
+            "url": event.url,
+            "keywords": event.keywords,
+            "timestamp": event.timestamp.isoformat(),
+            "content_hash": event.content_hash,
+            "patch_version": event.patch_version,
+            "author": event.author,
+            "category": event.category,
+            "diff": event.diff,
+        }
+
+        self._client.upsert(
+            collection_name=COLLECTION,
+            points=[
+                models.PointStruct(
+                    id=event.id,
+                    vector=vector,
+                    payload=payload,
+                )
+            ],
+        )
+        logger.debug("Stored event %s (%s) in Qdrant", event.id, event.type.value)
+
+    async def search(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        vector = await generate_embedding(query)
+
+        qdrant_filter: models.Filter | None = None
+        if filters:
+            conditions = [
+                models.FieldCondition(
+                    key=key,
+                    match=models.MatchValue(value=value),
+                )
+                for key, value in filters.items()
+            ]
+            qdrant_filter = models.Filter(must=conditions)
+
+        results = self._client.search(
+            collection_name=COLLECTION,
+            query_vector=vector,
+            limit=limit,
+            query_filter=qdrant_filter,
+            with_payload=True,
+        )
+
+        return [
+            {"score": hit.score, **hit.payload}
+            for hit in results
+        ]
+
+    def delete_event(self, event_id: str) -> None:
+        self._client.delete(
+            collection_name=COLLECTION,
+            points_selector=models.PointIdsList(points=[event_id]),
+        )
+        logger.debug("Deleted event %s from Qdrant", event_id)
+
+    def count(self) -> int:
+        result = self._client.count(collection_name=COLLECTION, exact=True)
+        return result.count
+
+
+# --- Module-level convenience functions (backward compatibility) ---
+
+_default_store = QdrantStore()
+
+
+async def ensure_collection() -> None:
+    """Module-level wrapper for backward compatibility."""
+    _default_store.ensure_collection()
 
 
 async def store_event(event: SCEvent) -> None:
-    """Stocke un événement dans Qdrant (upsert)."""
-    import asyncio
-    from uuid import NAMESPACE_URL, uuid5
-
-    client = get_qdrant_client()
-    await ensure_collection(client)
-
-    point_id = str(uuid5(NAMESPACE_URL, f"sc_event:{event.id}"))
-    payload = event.model_dump(mode="json")
-    payload["timestamp_ts"] = event.timestamp.timestamp()
-
-    await asyncio.to_thread(
-        client.upsert,
-        collection_name=COLLECTION,
-        points=[models.PointStruct(id=point_id, vector=DUMMY_VECTOR, payload=payload)],
-    )
+    """Module-level wrapper for backward compatibility."""
+    await _default_store.store_event(event)
 
 
 async def get_events(
@@ -84,41 +162,16 @@ async def get_events(
     category: str | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
-    """Récupère des événements depuis Qdrant avec filtres combinés."""
-    import asyncio
-
-    client = get_qdrant_client()
-    await ensure_collection(client)
-
-    filters: list[models.Condition] = []
-
-    if since_ts is not None:
-        filters.append(models.FieldCondition(key="timestamp_ts", range=models.Range(gte=since_ts)))
-
-    if priority_min is not None:
-        priorities = _priorities_above(priority_min)
-        filters.append(models.FieldCondition(key="priority", match=models.MatchAny(any=priorities)))
-
+    """Module-level wrapper — uses QdrantStore.search with filters."""
+    filters: dict[str, Any] = {}
     if event_type is not None:
-        filters.append(models.FieldCondition(key="type", match=models.MatchValue(value=event_type)))
-
+        filters["type"] = event_type
+    if priority_min is not None:
+        filters["priority"] = priority_min.value if isinstance(priority_min, Priority) else priority_min
     if category is not None:
-        filters.append(models.FieldCondition(key="category", match=models.MatchValue(value=category)))
-
-    result = await asyncio.to_thread(
-        client.scroll,
-        collection_name=COLLECTION,
-        scroll_filter=models.Filter(must=filters) if filters else None,
+        filters["category"] = category
+    return await _default_store.search(
+        query="event",  # generic query for filtered search
         limit=limit,
-        with_payload=True,
-        order_by=models.OrderBy(key="timestamp_ts", direction="desc"),
+        filters=filters if filters else None,
     )
-
-    return [point.payload for point in result[0] if point.payload]
-
-
-def _priorities_above(min_priority: Priority) -> list[str]:
-    """Retourne la liste des priorités >= min_priority."""
-    order = [Priority.LOW, Priority.MEDIUM, Priority.HIGH, Priority.CRITICAL]
-    idx = order.index(min_priority)
-    return [p.value for p in order[idx:]]
