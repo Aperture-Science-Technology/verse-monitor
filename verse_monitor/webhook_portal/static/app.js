@@ -129,12 +129,12 @@ function renderHome(app){
       '</div>' +
       '<div><div class="code-block">' +
         '<div class="code-block-header"><span class="code-block-lang">mcp.json</span><button class="code-block-copy" id="mcp-copy-btn">Copy</button></div>' +
-        '<pre><span class="punct">{</span>\n  <span class="key">"mcpServers"</span><span class="punct">:</span> <span class="punct">{</span>\n    <span class="key">"verse-monitor"</span><span class="punct">:</span> <span class="punct">{</span>\n      <span class="key">"url"</span><span class="punct">:</span> <span class="str">"https://verse-mcp.aperture-agency.org/mcp"</span>\n    <span class="punct">}</span>\n  <span class="punct">}</span>\n<span class="punct">}</span></pre>' +
+        '<pre><span class="punct">{</span>\n  <span class="key">"mcpServers"</span><span class="punct">:</span> <span class="punct">{</span>\n    <span class="key">"verse-monitor"</span><span class="punct">:</span> <span class="punct">{</span>\n      <span class="key">"url"</span><span class="punct">:</span> <span class="str">"https://verse-monitor.aperture-agency.org/mcp"</span>\n    <span class="punct">}</span>\n  <span class="punct">}</span>\n<span class="punct">}</span></pre>' +
       '</div></div>' +
     '</div></div>';
   app.appendChild(mcpSection);
   $('#mcp-copy-btn').addEventListener('click', function(){
-    navigator.clipboard.writeText('{\n  "mcpServers": {\n    "verse-monitor": {\n      "url": "https://verse-mcp.aperture-agency.org/mcp"\n    }\n  }\n}');
+    navigator.clipboard.writeText('{\n  "mcpServers": {\n    "verse-monitor": {\n      "url": "https://verse-monitor.aperture-agency.org/mcp"\n    }\n  }\n}');
     showToast('Configuration copied!');
   });
 
