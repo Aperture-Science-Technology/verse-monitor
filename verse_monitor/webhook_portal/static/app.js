@@ -522,8 +522,7 @@ $('#nav-home').addEventListener('click', function(e){
 $('#nav-get-started').addEventListener('click', function(e){
   e.preventDefault(); state.view='register'; render(); window.scrollTo({top:0,behavior:'smooth'});
 });
-$('#nav-dash-btn').addEventListener('click', function(e){
-  e.preventDefault();
+$('#nav-dash-btn').addEventListener('click', function(){
   showApiKeyModal();
 });
 
