@@ -491,29 +491,56 @@ function showModal(title, body, onConfirm){
 function showApiKeyModal(){
   var overlay = document.createElement('div');
   overlay.className = 'api-key-overlay';
-  overlay.innerHTML =
-    '<div class="api-key-modal">' +
-      '<h3>🔑 Access Dashboard</h3>' +
-      '<p>Enter your API key to view your subscription details, delivery stats, and configuration.</p>' +
-      '<input class="form-control" id="api-key-input" placeholder="Enter your API key" type="password" autocomplete="off">' +
-      '<div class="modal-actions">' +
-        '<button class="btn btn-secondary btn-sm" id="api-key-cancel">Cancel</button>' +
-        '<button class="btn btn-primary btn-sm" id="api-key-submit">Access</button>' +
-      '</div>' +
-    '</div>';
+
+  var modal = document.createElement('div');
+  modal.className = 'api-key-modal';
+
+  var heading = document.createElement('h3');
+  heading.textContent = '🔑 Access Dashboard';
+
+  var desc = document.createElement('p');
+  desc.textContent = 'Enter your API key to view your subscription details, delivery stats, and configuration.';
+
+  var input = document.createElement('input');
+  input.className = 'form-control';
+  input.type = 'password';
+  input.placeholder = 'Enter your API key';
+  input.autocomplete = 'off';
+
+  var actions = document.createElement('div');
+  actions.className = 'modal-actions';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-secondary btn-sm';
+  cancelBtn.textContent = 'Cancel';
+
+  var submitBtn = document.createElement('button');
+  submitBtn.className = 'btn btn-primary btn-sm';
+  submitBtn.textContent = 'Access';
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(submitBtn);
+  modal.appendChild(heading);
+  modal.appendChild(desc);
+  modal.appendChild(input);
+  modal.appendChild(actions);
+  overlay.appendChild(modal);
   document.body.appendChild(overlay);
-  var input = overlay.querySelector('#api-key-input');
-  input.focus();
-  overlay.querySelector('#api-key-cancel').addEventListener('click', function(){ overlay.remove(); });
-  overlay.querySelector('#api-key-submit').addEventListener('click', submitApiKey);
-  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submitApiKey(); });
-  overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
+
+  requestAnimationFrame(function(){ input.focus(); });
+
+  function close(){ overlay.remove(); }
   function submitApiKey(){
     var key = input.value.trim();
     if(!key){ return; }
-    overlay.remove();
+    close();
     state.apiKey = key; state.view = 'dashboard'; loadDashboard(key);
   }
+
+  cancelBtn.addEventListener('click', close);
+  submitBtn.addEventListener('click', submitApiKey);
+  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submitApiKey(); });
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
 }
 
 // ── NAV ──
