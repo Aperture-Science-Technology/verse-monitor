@@ -269,6 +269,10 @@ function renderRegister(app){
     fmtGrid.appendChild(fc);
   });
   g3.appendChild(fmtGrid);
+  var fmtHint = document.createElement('div');
+  fmtHint.className = 'form-hint';
+  fmtHint.textContent = 'Discord, Slack, Telegram (Bot API), or any HTTPS endpoint that accepts JSON POST. For other platforms, use the Generic JSON format with a bridge service (Zapier, Make, n8n).';
+  g3.parentNode.insertBefore(fmtHint, g3.nextSibling);
   card.appendChild(g3);
 
   // 4. Priority
@@ -481,6 +485,35 @@ function showModal(title, body, onConfirm){
   overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
 }
 
+// ── API KEY MODAL ──
+function showApiKeyModal(){
+  var overlay = document.createElement('div');
+  overlay.className = 'api-key-overlay';
+  overlay.innerHTML =
+    '<div class="api-key-modal">' +
+      '<h3>🔑 Access Dashboard</h3>' +
+      '<p>Enter your API key to view your subscription details, delivery stats, and configuration.</p>' +
+      '<input class="form-control" id="api-key-input" placeholder="Enter your API key" type="password" autocomplete="off">' +
+      '<div class="modal-actions">' +
+        '<button class="btn btn-secondary btn-sm" id="api-key-cancel">Cancel</button>' +
+        '<button class="btn btn-primary btn-sm" id="api-key-submit">Access</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  var input = overlay.querySelector('#api-key-input');
+  input.focus();
+  overlay.querySelector('#api-key-cancel').addEventListener('click', function(){ overlay.remove(); });
+  overlay.querySelector('#api-key-submit').addEventListener('click', submitApiKey);
+  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submitApiKey(); });
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
+  function submitApiKey(){
+    var key = input.value.trim();
+    if(!key){ return; }
+    overlay.remove();
+    state.apiKey = key; state.view = 'dashboard'; loadDashboard(key);
+  }
+}
+
 // ── NAV ──
 $('#nav-home').addEventListener('click', function(e){
   e.preventDefault(); window.history.replaceState({},'','/');
@@ -489,9 +522,9 @@ $('#nav-home').addEventListener('click', function(e){
 $('#nav-get-started').addEventListener('click', function(e){
   e.preventDefault(); state.view='register'; render(); window.scrollTo({top:0,behavior:'smooth'});
 });
-$('#nav-dash-btn').addEventListener('click', function(){
-  var key = prompt('Enter your API key:');
-  if(key && key.trim()){ state.apiKey = key.trim(); state.view = 'dashboard'; loadDashboard(key.trim()); }
+$('#nav-dash-btn').addEventListener('click', function(e){
+  e.preventDefault();
+  showApiKeyModal();
 });
 
 // ── INIT ──
