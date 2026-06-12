@@ -272,8 +272,8 @@ function renderRegister(app){
   var fmtHint = document.createElement('div');
   fmtHint.className = 'form-hint';
   fmtHint.textContent = 'Discord, Slack, Telegram (Bot API), or any HTTPS endpoint that accepts JSON POST. For other platforms, use the Generic JSON format with a bridge service (Zapier, Make, n8n).';
-  g3.parentNode.insertBefore(fmtHint, g3.nextSibling);
   card.appendChild(g3);
+  card.appendChild(fmtHint);
 
   // 4. Priority
   var g4 = document.createElement('div'); g4.className = 'form-group';
