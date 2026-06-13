@@ -200,15 +200,6 @@ function renderHome(app){
   ctaSection.innerHTML = '<h2 class="section-title">Ready to stay informed?</h2><p class="section-subtitle">Set up your first webhook subscription in under a minute. No account required.</p><button class="btn btn-primary btn-xl" id="cta-bottom-btn">Create Free Subscription</button>';
   app.appendChild(ctaSection);
   $('#cta-bottom-btn').addEventListener('click', function(){ state.view='register'; render(); window.scrollTo({top:0,behavior:'smooth'}); });
-
-  // Nav docs link
-  $('#nav-docs').addEventListener('click', function(e){ e.preventDefault(); showDocs(); });
-  // Footer docs link
-  var footerDocs = document.getElementById('footer-docs');
-  if (footerDocs) footerDocs.addEventListener('click', function(e){ e.preventDefault(); showDocs(); });
-  // Sources section docs link
-  var sourcesDocsLink = document.getElementById('sources-docs-link');
-  if (sourcesDocsLink) sourcesDocsLink.addEventListener('click', function(e){ e.preventDefault(); showDocs(); window.scrollTo({top:0,behavior:'smooth'}); });
 }
 
 // ── DOCS ──
@@ -664,5 +655,14 @@ var params = new URLSearchParams(window.location.search);
 var key = params.get('key');
 if(key){ state.apiKey=key; state.view='dashboard'; loadDashboard(key); }
 else { render(); }
+
+// ── GLOBAL EVENT DELEGATION (persists across re-renders) ──
+document.addEventListener('click', function(e){
+  var t = e.target;
+  // Footer docs link
+  if (t.id === 'footer-docs'){ e.preventDefault(); e.stopPropagation(); showDocs(); }
+  // Sources docs link (dynamically created)
+  if (t.id === 'sources-docs-link'){ e.preventDefault(); e.stopPropagation(); showDocs(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
 
 })();
