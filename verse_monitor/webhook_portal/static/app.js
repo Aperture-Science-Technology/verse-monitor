@@ -154,9 +154,6 @@ function renderHome(app){
       '<div class="disclaimer-links"><button class="footer-link-btn" id="sources-docs-link">Voir la documentation complète →</button><a href="https://github.com/Aperture-Science-Technology/verse-mcp/issues" target="_blank" rel="noopener">Request a source →</a><a href="mailto:contact@aperture-agency.org">Contact us →</a></div>' +
     '</div>';
   app.appendChild(disclaimerSection);
-  // Direct handler on the dynamically created button
-  var _sdl = document.getElementById('sources-docs-link');
-  if (_sdl) _sdl.addEventListener('click', function(){ showDocs(); window.scrollTo({top:0,behavior:'smooth'}); });
 
   // ── EVENT TYPES ──
   var eventSection = document.createElement('div');
@@ -663,7 +660,7 @@ else { render(); }
 document.addEventListener('click', function(e){
   var t = e.target;
   // Footer docs link
-  if (t.id === 'footer-docs'){ e.preventDefault(); e.stopPropagation(); showDocs(); }
+  if (t.id === 'footer-docs'){ e.preventDefault(); e.stopPropagation(); showDocs(); window.scrollTo({top:0,behavior:'smooth'}); }
   // Sources docs link (dynamically created)
   if (t.id === 'sources-docs-link'){ e.preventDefault(); e.stopPropagation(); showDocs(); window.scrollTo({top:0,behavior:'smooth'}); }
 });
