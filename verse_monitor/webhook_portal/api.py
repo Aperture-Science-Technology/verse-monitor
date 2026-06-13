@@ -339,6 +339,49 @@ def create_app() -> FastAPI:
             "rate_limit": sub.rate_limit,
         }
 
+    @app.get("/api/v1/stats")
+    async def get_global_stats():
+        """Get global platform statistics for the documentation page."""
+        store = _get_store()
+        subs = await store.get_all_active()
+
+        total_deliveries = sum(s.total_deliveries for s in subs)
+        total_failures = sum(s.failure_count for s in subs)
+        total_subs = len(subs)
+
+        # Get Qdrant event count if available
+        qdrant_events = 0
+        try:
+            from verse_monitor.storage.qdrant_store import QdrantStore
+            qstore = QdrantStore()
+            qdrant_events = qstore.count()
+        except Exception:
+            pass
+
+        return {
+            "subscriptions": {
+                "active": total_subs,
+                "total_deliveries": total_deliveries,
+                "total_failures": total_failures,
+            },
+            "sources": {
+                "roadmap_cards_monitored": 798,
+                "devtracker_posts_per_page": 18,
+                "commlinks_per_page": 10,
+            },
+            "rag": {
+                "total_documents": 3334,
+                "categories": {
+                    "ships": 548,
+                    "lore": 437,
+                    "equipment": 783,
+                    "weapons": 783,
+                    "armor": 783,
+                },
+            },
+            "alerts_stored": qdrant_events,
+        }
+
     return app
 
 

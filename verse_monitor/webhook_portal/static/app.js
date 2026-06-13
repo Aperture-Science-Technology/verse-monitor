@@ -200,6 +200,95 @@ function renderHome(app){
   ctaSection.innerHTML = '<h2 class="section-title">Ready to stay informed?</h2><p class="section-subtitle">Set up your first webhook subscription in under a minute. No account required.</p><button class="btn btn-primary btn-xl" id="cta-bottom-btn">Create Free Subscription</button>';
   app.appendChild(ctaSection);
   $('#cta-bottom-btn').addEventListener('click', function(){ state.view='register'; render(); window.scrollTo({top:0,behavior:'smooth'}); });
+
+  // Nav docs link
+  $('#nav-docs').addEventListener('click', function(e){ e.preventDefault(); showDocs(); });
+}
+
+// ── DOCS ──
+function renderDocsContent(){
+  return '<div class="docs-hero">' +
+    '<a href="#" class="docs-back" id="docs-back-link">← Retour</a>' +
+    '<h1 class="hero-title" style="font-size:2em">Données & Sources</h1>' +
+    '<p class="hero-subtitle">Voici exactement ce que Verse Monitor surveille pour vous, d\'où ça vient, et ce qu\'on en extrait.</p>' +
+  '</div>' +
+
+  '<div class="container"><div class="docs-stats" id="docs-stats">' +
+    '<div class="docs-stat"><div class="docs-stat-value" id="stat-subs">—</div><div class="docs-stat-label">Subscriptions actives</div></div>' +
+    '<div class="docs-stat"><div class="docs-stat-value" id="stat-deliveries">—</div><div class="docs-stat-label">Alertes livrées</div></div>' +
+    '<div class="docs-stat"><div class="docs-stat-value" id="stat-cards">—</div><div class="docs-stat-label">Cartes Roadmap</div></div>' +
+    '<div class="docs-stat"><div class="docs-stat-value" id="stat-rag">—</div><div class="docs-stat-label">Documents connaissances</div></div>' +
+  '</div></div>' +
+
+  '<div class="container"><div class="docs-sources">' +
+
+    srcCard('📡', 'Devtracker — Posts Spectrum', 'Toutes les 2 min',
+      'Les posts officiels des développeurs sur Spectrum. Chaque message est récupéré dans son intégralité (~6 000 caractères).',
+      ['Le titre complet du post', 'Le nom du développeur (ex: Nicou-CIG)', 'Le <strong>contenu intégral</strong> du message (~6 000 caractères)', 'La date de publication'],
+      '"Alpha 4.8.1 Known Issues Update" de Nicou-CIG — le post complet avec tous les bugs connus et les correctifs en cours.',
+      'Mises à jour de patch (Known Issues, hotfixes), annonces de features, réponses aux questions de la communauté, calendriers de publication.') +
+
+    srcCard('📰', 'Comm-Links — Articles officiels RSI', 'Toutes les 5 min',
+      'Les articles publiés par Roberts Space Industries. Chaque article est récupéré en entier (~4 000 caractères).',
+      ['Le titre complet de l\'article', 'La catégorie (transmission, engineering, etc.)', 'Le <strong>contenu intégral</strong> (~4 000 caractères)', 'Sous-titres, paragraphes et listes'],
+      '"Star Citizen Monthly Report — June 2025" — le rapport complet avec l\'état de chaque département et les objectifs du mois.',
+      'Rapports mensuels, This Week in Star Citizen, Behind the Ships, annonces de ventes et d\'événements, interviews.') +
+
+    srcCard('🗺️', 'Roadmap — Calendrier de développement', 'Toutes les 5 min',
+      'Le calendrier public de développement de CIG. 798 cartes surveillées en permanence.',
+      ['Cartes ajoutées, retardées, publiées ou supprimées', 'Le statut (Tentative, Committed, Released)', 'Le patch ciblé (4.8, 4.9, 5.0, etc.)', 'La description complète de chaque feature'],
+      '"Server Meshing" passe de Tentative à Released dans le patch 4.8 → alerte CRITICAL immédiate.',
+      '🆕 Feature ajoutée • ✅ Feature publiée • ⚠️ Feature retardée • 🗑️ Feature retirée • 📝 Détails mis à jour') +
+
+    '<div class="docs-source-card docs-rag">' +
+      '<div class="docs-source-head"><div class="docs-source-icon">🔍</div><div><h3>Base de connaissances</h3><span class="docs-badge">3 334 documents</span></div></div>' +
+      '<p>Base vectorisée pour la recherche sémantique. Interrogeable via MCP (Claude Code, Cursor, etc.).</p>' +
+      '<div class="docs-rag-grid">' +
+        '<div>🚀 <strong>548</strong> vaisseaux</div><div>📖 <strong>437</strong> entrées Galactapedia</div>' +
+        '<div>🔧 <strong>783</strong> équipements</div><div>🔫 <strong>783</strong> armes</div><div>🛡️ <strong>783</strong> armures</div>' +
+      '</div>' +
+    '</div>' +
+
+  '</div></div>' +
+
+  '<div class="container section" style="text-align:center">' +
+    '<h3 class="section-title" style="font-size:1.2em">Besoin de l\'API complète ?</h3>' +
+    '<p class="section-subtitle" style="margin-bottom:20px">Documentation technique pour développeurs avec tous les endpoints et exemples.</p>' +
+    '<a href="/api/v1/docs" class="btn btn-secondary" target="_blank" rel="noopener">Voir l\'API Reference →</a>' +
+  '</div>';
+}
+
+function srcCard(icon, title, badge, desc, items, example, covered){
+  var itemsHtml = items.map(function(i){ return '<li>' + i + '</li>'; }).join('');
+  return '<div class="docs-source-card">' +
+    '<div class="docs-source-head"><div class="docs-source-icon">' + icon + '</div><div><h3>' + title + '</h3><span class="docs-badge">' + badge + '</span></div></div>' +
+    '<p>' + desc + '</p>' +
+    '<div class="docs-block"><h4>Ce qu\'on récupère</h4><ul>' + itemsHtml + '</ul></div>' +
+    '<div class="docs-block"><h4>Contenu couvert</h4><div class="docs-example"><strong>Exemple :</strong> ' + example + '</div><p>' + covered + '</p></div>' +
+    '</div>';
+}
+
+function showDocs(){
+  var app = $('#app'); if(!app) return;
+  app.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.innerHTML = renderDocsContent();
+  app.appendChild(wrap);
+  $('#docs-back-link').addEventListener('click', function(e){ e.preventDefault(); state.view='home'; render(); window.scrollTo({top:0,behavior:'smooth'}); });
+  loadDocsStats();
+}
+
+function loadDocsStats(){
+  fetch('/api/v1/stats').then(function(r){ return r.json(); }).then(function(data){
+    var subs = data.subscriptions || {};
+    var src = data.sources || {};
+    var rag = data.rag || {};
+    var el;
+    el = document.getElementById('stat-subs'); if(el) el.textContent = subs.active != null ? subs.active : '—';
+    el = document.getElementById('stat-deliveries'); if(el) el.textContent = subs.total_deliveries != null ? subs.total_deliveries : '—';
+    el = document.getElementById('stat-cards'); if(el) el.textContent = src.roadmap_cards_monitored || '—';
+    el = document.getElementById('stat-rag'); if(el) el.textContent = rag.total_documents || '—';
+  }).catch(function(){});
 }
 
 function goDashboard(){
