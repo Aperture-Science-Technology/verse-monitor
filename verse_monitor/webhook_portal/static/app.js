@@ -151,7 +151,7 @@ function renderHome(app){
       '<p><strong>Available now:</strong> Ship specifications, Galactapedia lore entries, Comm-Links, and equipment/items data from the Star Citizen Wiki API. Roadmap changes, patch notes, and dev tracker posts via the alert system.</p>' +
       '<p><strong>Improving continuously:</strong> We\'re actively ingesting more sources and expanding coverage. New data types and deeper historical content are added on a rolling basis.</p>' +
       '<p><strong>Missing something?</strong> If you need specific data that isn\'t covered yet, reach out — we prioritize ingestion based on community demand.</p>' +
-      '<div class="disclaimer-links"><a href="https://github.com/Aperture-Science-Technology/verse-mcp/issues" target="_blank" rel="noopener">Request a source →</a><a href="mailto:contact@aperture-agency.org">Contact us →</a></div>' +
+      '<div class="disclaimer-links"><a href="#" id="sources-docs-link">Voir la documentation complète →</a><a href="https://github.com/Aperture-Science-Technology/verse-mcp/issues" target="_blank" rel="noopener">Request a source →</a><a href="mailto:contact@aperture-agency.org">Contact us →</a></div>' +
     '</div>';
   app.appendChild(disclaimerSection);
 
@@ -203,6 +203,12 @@ function renderHome(app){
 
   // Nav docs link
   $('#nav-docs').addEventListener('click', function(e){ e.preventDefault(); showDocs(); });
+  // Footer docs link
+  var footerDocs = document.getElementById('footer-docs');
+  if (footerDocs) footerDocs.addEventListener('click', function(e){ e.preventDefault(); showDocs(); });
+  // Sources section docs link
+  var sourcesDocsLink = document.getElementById('sources-docs-link');
+  if (sourcesDocsLink) sourcesDocsLink.addEventListener('click', function(e){ e.preventDefault(); showDocs(); window.scrollTo({top:0,behavior:'smooth'}); });
 }
 
 // ── DOCS ──
