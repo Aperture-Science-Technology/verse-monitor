@@ -359,8 +359,8 @@ select.form-control {
 .footer-links { display: flex; gap: 20px; }
 .footer-links a { font-size: .75em; color: var(--text4); font-weight: 510; text-decoration: none; transition: color .15s; }
 .footer-links a:hover { color: var(--text2); }
-.footer-link-btn { font-size: .75em; color: var(--text4); font-weight: 510; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; transition: color .15s; }
-.footer-link-btn:hover { color: var(--text2); }
+.footer-link-btn { font-size: .75em; color: var(--text4); font-weight: 510; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; transition: all .15s; }
+.footer-link-btn:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); color: var(--text2); }
 .footer-copy { font-size: .75em; color: var(--text4); }
 .footer-legal { font-size: .6875em; color: var(--text4); text-align: center; margin-top: 16px; opacity: .7; }
 
