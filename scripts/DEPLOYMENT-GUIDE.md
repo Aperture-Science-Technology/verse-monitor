@@ -80,15 +80,15 @@ curl -I https://verse-monitor.aperture-agency.org
 ## ═══════════════════════════════════════════
 
 ### 3.1 — Backup de l'actuel
-cp /home/glados/deployments/verse-mcp/docker-compose.yml \
-   /home/glados/deployments/verse-mcp/docker-compose.yml.bak.$(date +%Y%m%d)
+cp /home/glados/deployments/verse-monitor/docker-compose.yml \
+   /home/glados/deployments/verse-monitor/docker-compose.yml.bak.$(date +%Y%m%d)
 
 ### 3.2 — Appliquer le hardened
-cp /home/glados/deployments/verse-mcp/docker-compose.hardened.yml \
-   /home/glados/deployments/verse-mcp/docker-compose.yml
+cp /home/glados/deployments/verse-monitor/docker-compose.hardened.yml \
+   /home/glados/deployments/verse-monitor/docker-compose.yml
 
 ### 3.3 — Valider la config
-cd /home/glados/deployments/verse-mcp
+cd /home/glados/deployments/verse-monitor
 docker compose config > /dev/null && echo "Config valide" || echo "ERREUR de config"
 
 ### 3.4 — Redéployer
@@ -99,9 +99,9 @@ docker compose ps
 docker compose logs --tail 50
 
 ### 3.6 — Vérifier les security options
-docker inspect verse-mcp --format '{{json .HostConfig.SecurityOpt}}'
-docker inspect verse-mcp --format '{{json .HostConfig.CapDrop}}'
-docker inspect verse-mcp --format '{{json .HostConfig.ReadonlyRootfs}}'
+docker inspect verse-monitor --format '{{json .HostConfig.SecurityOpt}}'
+docker inspect verse-monitor --format '{{json .HostConfig.CapDrop}}'
+docker inspect verse-monitor --format '{{json .HostConfig.ReadonlyRootfs}}'
 
 ## ═══════════════════════════════════════════
 ## PHASE 4 — SCAN DE VULNÉRABILITÉS (glados)
@@ -157,9 +157,9 @@ sudo ufw allow OpenSSH
 sudo ufw enable
 
 ### Docker Compose cassé :
-cp /home/glados/deployments/verse-mcp/docker-compose.yml.bak.<timestamp> \
-   /home/glados/deployments/verse-mcp/docker-compose.yml
-cd /home/glados/deployments/verse-mcp
+cp /home/glados/deployments/verse-monitor/docker-compose.yml.bak.<timestamp> \
+   /home/glados/deployments/verse-monitor/docker-compose.yml
+cd /home/glados/deployments/verse-monitor
 docker compose up -d --build
 
 ### Traefik ne démarre pas :

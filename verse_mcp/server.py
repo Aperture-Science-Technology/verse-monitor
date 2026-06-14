@@ -35,7 +35,7 @@ async def lifespan(app):
 
 
 mcp = FastMCP(
-    "verse-mcp",
+    "verse-monitor",
     lifespan=lifespan,
 )
 

@@ -1,6 +1,6 @@
 """Configuration pydantic-settings pour verse-monitor.
 
-Lit les variables d'environnement depuis le .env partagé avec verse-mcp.
+Lit les variables d'environnement depuis le .env partagé avec verse-monitor.
 """
 
 from pydantic_settings import BaseSettings

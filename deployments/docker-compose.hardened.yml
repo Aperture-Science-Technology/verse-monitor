@@ -1,5 +1,5 @@
 # ============================================================
-# verse-mcp/docker-compose.yml — HARDENED VERSION
+# verse-monitor/docker-compose.yml — HARDENED VERSION
 # ============================================================
 # Mesures de sécurité ajoutées :
 #   - no-new-privileges sur tous les conteneurs
@@ -37,14 +37,14 @@ x-default-deploy: &default-deploy
       cpus: "0.25"
 
 services:
-  verse-mcp:
+  verse-monitor:
     build:
-      context: /home/glados/projects/verse-mcp
+      context: /home/glados/projects/verse-monitor
       dockerfile: Dockerfile.mcp
-    container_name: verse-mcp
+    container_name: verse-monitor
     restart: unless-stopped
     networks:
-      - verse-mcp-network
+      - verse-monitor-network
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis-verse:6379
       QDRANT_URL: http://qdrant:6333
@@ -84,24 +84,24 @@ services:
     # Traefik labels avec security chain
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.verse-mcp.rule=Host(`verse-mcp.aperture-agency.org`)"
-      - "traefik.http.routers.verse-mcp.tls.certresolver=cf"
-      - "traefik.http.routers.verse-mcp.middlewares=security-chain@file"
-      - "traefik.http.routers.verse-mcp-monitor.rule=Host(`verse-monitor.aperture-agency.org`) && PathPrefix(`/mcp`)"
-      - "traefik.http.routers.verse-mcp-monitor.tls.certresolver=cf"
-      - "traefik.http.routers.verse-mcp-monitor.middlewares=security-chain@file"
-      - "traefik.http.services.verse-mcp.loadbalancer.server.port=8000"
-      - "traefik.http.services.verse-mcp.loadbalancer.passhostheader=true"
+      - "traefik.http.routers.verse-monitor.rule=Host(`verse-monitor.aperture-agency.org`)"
+      - "traefik.http.routers.verse-monitor.tls.certresolver=cf"
+      - "traefik.http.routers.verse-monitor.middlewares=security-chain@file"
+      - "traefik.http.routers.verse-monitor-monitor.rule=Host(`verse-monitor.aperture-agency.org`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.verse-monitor-monitor.tls.certresolver=cf"
+      - "traefik.http.routers.verse-monitor-monitor.middlewares=security-chain@file"
+      - "traefik.http.services.verse-monitor.loadbalancer.server.port=8000"
+      - "traefik.http.services.verse-monitor.loadbalancer.passhostheader=true"
 
   verse-monitor:
     build:
-      context: /home/glados/projects/verse-mcp
+      context: /home/glados/projects/verse-monitor
       dockerfile: Dockerfile.monitor
     container_name: verse-monitor
     restart: unless-stopped
-    env_file: /home/glados/deployments/verse-mcp/.env
+    env_file: /home/glados/deployments/verse-monitor/.env
     networks:
-      - verse-mcp-network
+      - verse-monitor-network
     depends_on:
       redis-verse:
         condition: service_healthy
@@ -130,12 +130,12 @@ services:
 
   verse-monitor-portal:
     build:
-      context: /home/glados/projects/verse-mcp
+      context: /home/glados/projects/verse-monitor
       dockerfile: Dockerfile.portal
-    container_name: verse-mcp-portal
+    container_name: verse-monitor-portal
     restart: unless-stopped
     networks:
-      - verse-mcp-network
+      - verse-monitor-network
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis-verse:6379
     depends_on:
@@ -183,7 +183,7 @@ services:
       --rename-command DEBUG ""
       --rename-command CONFIG "CONFIG_${REDIS_PASSWORD}"
     networks:
-      - verse-mcp-network
+      - verse-monitor-network
     volumes:
       - redis-data:/data
     healthcheck:
@@ -218,7 +218,7 @@ services:
     container_name: qdrant
     restart: unless-stopped
     networks:
-      - verse-mcp-network
+      - verse-monitor-network
     volumes:
       - qdrant-storage:/qdrant/storage
     logging: *default-logging
@@ -242,8 +242,8 @@ services:
           cpus: "0.5"
 
 networks:
-  verse-mcp-network:
-    name: verse-mcp-network
+  verse-monitor-network:
+    name: verse-monitor-network
     driver: bridge
     # Isolation réseau interne
     internal: false    # false car Traefik doit y accéder
@@ -253,6 +253,6 @@ networks:
 
 volumes:
   redis-data:
-    name: verse-mcp_redis-data
+    name: verse-monitor_redis-data
   qdrant-storage:
-    name: verse-mcp_qdrant-storage
+    name: verse-monitor_qdrant-storage

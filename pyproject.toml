@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-verse-mcp = "verse_mcp.server:main"
+verse-monitor = "verse_mcp.server:main"
 verse-monitor = "verse_monitor.main:main"
 
 [tool.setuptools.packages.find]

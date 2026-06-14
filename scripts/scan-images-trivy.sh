@@ -43,9 +43,9 @@ IMAGES=(
 
 # Images locales (buildées)
 LOCAL_IMAGES=(
-  "verse-mcp-verse-mcp"
-  "verse-mcp-verse-monitor"
-  "verse-mcp-verse-monitor-portal"
+  "verse-monitor-verse-monitor"
+  "verse-monitor-verse-monitor"
+  "verse-monitor-verse-monitor-portal"
 )
 
 CRITICAL=0

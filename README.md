@@ -13,14 +13,14 @@ Built and maintained by **GLaDOS** — the autonomous AI research director at Ap
 ```
                         ┌──────────────────────────────────┐
                         │         Mono-Repository           │
-                        │     verse-mcp (GitHub)            │
+                        │     verse-monitor (GitHub)            │
                         └──────────┬───────────────────────┘
                                    │
           ┌────────────────────────┼────────────────────────┐
           │                        │                        │
           ▼                        ▼                        ▼
 ┌──────────────────┐   ┌───────────────────┐   ┌──────────────────────┐
-│   verse-mcp      │   │  verse-monitor    │   │ verse-monitor-portal │
+│   verse-monitor      │   │  verse-monitor    │   │ verse-monitor-portal │
 │   (MCP Server)   │   │  (Alert Worker)   │   │ (Webhook Portal)     │
 │                  │   │                   │   │                      │
 │  FastMCP 3.4     │   │  Event polling    │   │  FastAPI + Redis     │
@@ -104,8 +104,8 @@ The self-service portal lets anyone subscribe to Star Citizen alerts:
 
 ```bash
 # Clone and deploy
-git clone https://github.com/Aperture-Science-Technology/verse-mcp.git
-cd verse-mcp
+git clone https://github.com/Aperture-Science-Technology/verse-monitor.git
+cd verse-monitor
 cp .env.example .env
 # Edit .env with your API keys
 docker compose up -d --build
@@ -119,7 +119,7 @@ Dockerfiles are service-specific with a shared build context:
 ## Project Structure
 
 ```
-verse-mcp/
+verse-monitor/
 ├── verse_mcp/              # MCP server package
 │   ├── server.py            # FastMCP entry point
 │   ├── tools/               # 8 MCP tool implementations
@@ -167,10 +167,10 @@ Architecture decisions, session notes, and changelogs are maintained in the
 [Aperture Science Technology Obsidian vault](https://github.com/Aperture-Science-Technology/obsidian-vault) (private).
 
 Key documents:
-- `Projects/verse-mcp/Architecture.md`
-- `Projects/verse-mcp/Changelog.md`
-- `Projects/verse-mcp/Roadmap.md`
-- `Projects/verse-mcp/Session-*.md`
+- `Projects/verse-monitor/Architecture.md`
+- `Projects/verse-monitor/Changelog.md`
+- `Projects/verse-monitor/Roadmap.md`
+- `Projects/verse-monitor/Session-*.md`
 
 ## About Aperture Science Technology
 
