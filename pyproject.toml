@@ -23,8 +23,8 @@ dependencies = [
 ]
 
 [project.scripts]
-verse-monitor = "verse_mcp.server:main"
-verse-monitor = "verse_monitor.main:main"
+verse-monitor-mcp = "verse_mcp.server:main"
+verse-monitor-worker = "verse_monitor.main:main"
 
 [tool.setuptools.packages.find]
 include = ["verse_mcp*", "verse_monitor*"]
