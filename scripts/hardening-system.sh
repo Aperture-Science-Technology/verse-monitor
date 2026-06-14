@@ -51,7 +51,9 @@ cat > /etc/ssh/sshd_config.d/99-hardening.conf << 'SSHEOF'
 # Généré automatiquement — ne pas éditer manuellement
 
 # Authentification
-PermitRootLogin no
+# PermitRootLogin prohibit-password : root par clé seulement (pas de password)
+# NE PAS mettre "no" — si glados est bloqué, root est le fallback
+PermitRootLogin prohibit-password
 PasswordAuthentication no
 PubkeyAuthentication yes
 ChallengeResponseAuthentication no
@@ -65,7 +67,10 @@ LoginGraceTime 20
 
 # Désactiver les fonctionnalités dangereuses
 X11Forwarding no
-AllowTcpForwarding no
+# AllowTcpForwarding local : autorise uniquement les tunnels locaux (port forwarding)
+# Nécessaire pour l'accès au dashboard Hermes via tunnel SSH
+# "no" bloquerait tous les tunnels, "yes" autorise aussi le remote (dangereux)
+AllowTcpForwarding local
 AllowAgentForwarding no
 PermitTunnel no
 GatewayPorts no
