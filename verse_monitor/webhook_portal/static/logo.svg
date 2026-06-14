@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="48%" r="50%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.15"/>
+      <stop offset="60%" stop-color="#3B82F6" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#0B1120" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" ry="112" fill="#0B1120"/>
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#glow)"/>
+
+  <!-- Concentric radar rings -->
+  <g transform="translate(256,250)" opacity="0.2">
+    <circle cx="0" cy="0" r="170" fill="none" stroke="#3B82F6" stroke-width="1"/>
+    <circle cx="0" cy="0" r="120" fill="none" stroke="#3B82F6" stroke-width="1"/>
+    <circle cx="0" cy="0" r="70" fill="none" stroke="#3B82F6" stroke-width="1"/>
+  </g>
+
+  <!-- Sweep wedge -->
+  <g transform="translate(256,250)" opacity="0.15">
+    <path d="M 0,0 L 0,-170 A 170,170 0 0,1 120,-120 Z" fill="#3B82F6"/>
+  </g>
+
+  <!-- Sweep line -->
+  <line x1="256" y1="250" x2="256" y2="80" stroke="#60A5FA" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Orbit arc — stylized data ring -->
+  <ellipse cx="256" cy="250" rx="195" ry="55" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity="0.25" transform="rotate(-15,256,250)"/>
+
+  <!-- Center core — pulsing dot -->
+  <circle cx="256" cy="250" r="10" fill="#60A5FA"/>
+  <circle cx="256" cy="250" r="20" fill="#60A5FA" opacity="0.15"/>
+  <circle cx="256" cy="250" r="35" fill="#60A5FA" opacity="0.06"/>
+
+  <!-- Signal blips — 3 data points on the ring -->
+  <circle cx="390" cy="195" r="5" fill="#60A5FA" opacity="0.7">
+    <animate attributeName="opacity" values="0.7;0.3;0.7" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="160" cy="130" r="4" fill="#60A5FA" opacity="0.5">
+    <animate attributeName="opacity" values="0.5;0.2;0.5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="140" cy="320" r="4" fill="#60A5FA" opacity="0.4">
+    <animate attributeName="opacity" values="0.4;0.15;0.4" dur="5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Pulse waves on right — active monitoring -->
+  <circle cx="340" cy="250" r="6" fill="none" stroke="#60A5FA" stroke-width="2" opacity="0.6"/>
+  <circle cx="368" cy="250" r="6" fill="none" stroke="#60A5FA" stroke-width="2" opacity="0.4"/>
+  <circle cx="396" cy="250" r="6" fill="none" stroke="#60A5FA" stroke-width="2" opacity="0.2"/>
+</svg>
