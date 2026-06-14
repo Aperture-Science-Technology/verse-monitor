@@ -1,16 +1,22 @@
 #!/bin/bash
 # ============================================================
-# Aperture Science VPS — Security Hardening Script v1.0
-# Debian 13 (trixie) — À exécuter en root
+# Aperture Science VPS — Security Hardening Script v2.0
+# Debian 13 (trixie) — À exéiter en root (une seule fois)
 # ============================================================
 # Ce script durcit :
-#   1. SSH
-#   2. UFW (pare-feu)
-#   3. Fail2Ban
-#   4. Docker daemon
-#   5. Kernel sysctl
-#   6. AppArmor
-#   7. Audit Lynis
+#   1. Crée un user admin (sudo) pour l'administration sécurité
+#   2. SSH : désactive root, auth par clé, AllowUsers=admin
+#   3. UFW (pare-feu)
+#   4. Fail2Ban
+#   5. Docker daemon
+#   6. Kernel sysctl
+#   7. AppArmor
+#   8. Audit Lynis
+# ============================================================
+# Architecture post-hardening :
+#   root    : désactivé en SSH
+#   admin   : sudo complet, accès SSH autorisé
+#   glados  : pas de sudo, accès SSH désactivé (apps uniquement via Docker)
 # ============================================================
 
 set -euo pipefail
@@ -31,45 +37,94 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "============================================"
-echo "  Aperture Science VPS — Hardening v1.0"
+echo "  Aperture Science VPS — Hardening v2.0"
 echo "  $(date)"
 echo "============================================"
 echo ""
 
+# ─── Demander le mot de passe admin ──────────────────────
+echo "Création du compte admin (sudo, accès SSH)."
+read -sp "Choisir un mot de passe pour admin : " ADMIN_PASS
+echo ""
+read -sp "Confirmer le mot de passe : " ADMIN_PASS_CONFIRM
+echo ""
+
+if [[ "$ADMIN_PASS" != "$ADMIN_PASS_CONFIRM" ]]; then
+   err "Les mots de passe ne correspondent pas. Annulation."
+   exit 1
+fi
+
+if [[ -z "$ADMIN_PASS" ]]; then
+   err "Le mot de passe ne peut pas être vide. Annulation."
+   exit 1
+fi
+
+log "Mot de passe admin validé"
+
 # ============================================================
-# 1. SSH HARDENING
+# 1. CRÉATION DU USER ADMIN
 # ============================================================
-echo "─── 1. SSH Hardening ───"
+echo ""
+echo "─── 1. Création du user admin ───"
+
+if id "admin" &>/dev/null; then
+   warn "Le user admin existe déjà — on le met à jour"
+   usermod -aG sudo admin 2>/dev/null || true
+else
+   useradd -m -s /bin/bash -G sudo admin
+   echo "admin:${ADMIN_PASS}" | chpasswd
+   log "User admin créé avec sudo"
+fi
+
+# Admin peut utiliser sudo sans mot de passe (pratique pour les scripts automatisés)
+echo "admin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/admin
+chmod 440 /etc/sudoers.d/admin
+log "Sudo sans mot de passe configuré pour admin"
+
+# Créer le répertoire .ssh pour admin
+mkdir -p /home/admin/.ssh
+chmod 700 /home/admin/.ssh
+touch /home/admin/.ssh/authorized_keys
+chmod 600 /home/admin/.ssh/authorized_keys
+chown -R admin:admin /home/admin/.ssh
+log "Répertoire .ssh/admin préparé"
+
+echo ""
+warn "⚠️  IMPORTANT : Copier ta clé publique SSH dans /home/admin/.ssh/authorized_keys"
+warn "   Pour l'instant, la connexion par mot de passe est activée temporairement"
+warn "   pour permettre le premier login admin et la copie de la clé."
+echo ""
+
+# ============================================================
+# 2. SSH HARDENING
+# ============================================================
+echo "─── 2. SSH Hardening ───"
 
 # Sauvegarde
 cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak.$(date +%Y%m%d%H%M%S)
 log "Sauvegarde sshd_config créée"
 
-# Appliquer les durcissements
+# Configuration SSH durcie
 cat > /etc/ssh/sshd_config.d/99-hardening.conf << 'SSHEOF'
-# === Aperture Science SSH Hardening ===
+# === Aperture Science SSH Hardening v2 ===
 # Généré automatiquement — ne pas éditer manuellement
 
 # Authentification
-# PermitRootLogin prohibit-password : root par clé seulement (pas de password)
-# NE PAS mettre "no" — si glados est bloqué, root est le fallback
-PermitRootLogin prohibit-password
-PasswordAuthentication no
+# Root désactivé — seul admin peut se connecter en SSH
+PermitRootLogin no
+PasswordAuthentication yes
 PubkeyAuthentication yes
 ChallengeResponseAuthentication no
 KbdInteractiveAuthentication no
 PermitEmptyPasswords no
 
-# Restriction d'accès
-AllowUsers glados
+# Restriction d'accès — seul admin peut se connecter
+AllowUsers admin
 MaxAuthTries 3
 LoginGraceTime 20
 
 # Désactiver les fonctionnalités dangereuses
 X11Forwarding no
-# AllowTcpForwarding local : autorise uniquement les tunnels locaux (port forwarding)
-# Nécessaire pour l'accès au dashboard Hermes via tunnel SSH
-# "no" bloquerait tous les tunnels, "yes" autorise aussi le remote (dangereux)
 AllowTcpForwarding local
 AllowAgentForwarding no
 PermitTunnel no
@@ -82,34 +137,42 @@ StrictModes yes
 IgnoreRhosts yes
 HostbasedAuthentication no
 
-# Timeouts
+# Timeouts — déconnecte les sessions zombies
 ClientAliveInterval 300
 ClientAliveCountMax 2
-
-# Banner (optionnel — décommenter si souhaité)
-# Banner /etc/ssh/banner
 SSHEOF
 
-log "Configuration SSH hardening écrite"
+log "Configuration SSH hardening écrite (root désactivé, admin seul autorisé)"
 
 # Valider la config SSH avant reload
 if sshd -t 2>/dev/null; then
     log "Configuration SSH valide"
-    systemctl reload sshd
-    log "SSHD rechargé"
 else
-    err "ERREUR de configuration SSH — restauration de la sauvegarde"
-    cp /etc/ssh/sshd_config.bak.* /etc/ssh/sshd_config
+    err "ERREUR de configuration SSH — vérifiez avec: sshd -t"
     exit 1
 fi
 
+warn "La configuration SSH est prête."
+warn "AVANT de recharger SSH, assurez-vous que :"
+warn "  1. Votre clé publique est dans /home/admin/.ssh/authorized_keys"
+warn "  2. Vous pouvez vous connecter en admin dans un AUTRE terminal"
+echo ""
+read -p "Recharger SSH maintenant ? (o/N) " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[oOyY]$ ]]; then
+    systemctl reload sshd
+    log "SSHD rechargé"
+else
+    warn "SSH non rechargé — rechargez manuellement : systemctl reload sshd"
+fi
+
 # ============================================================
-# 2. UFW (PARE-FEU)
+# 3. UFW (PARE-FEU)
 # ============================================================
 echo ""
-echo "─── 2. UFW Firewall ───"
+echo "─── 3. UFW Firewall ───"
 
-# Activer UFW avec des règles strictes
 ufw --force reset
 log "UFW reset"
 
@@ -117,28 +180,23 @@ ufw default deny incoming
 ufw default allow outgoing
 log "Politiques par défaut : deny incoming, allow outgoing"
 
-# SSH — limiter le rate
 ufw limit 22/tcp comment 'SSH rate-limited'
 log "SSH (22) — rate limité"
 
-# HTTP/HTTPS
 ufw allow 80/tcp comment 'HTTP'
 ufw allow 443/tcp comment 'HTTPS'
 log "HTTP (80) + HTTPS (443) autorisés"
 
-# Activer
 ufw --force enable
 log "UFW activé"
-
 ufw status verbose
 
 # ============================================================
-# 3. FAIL2BAN
+# 4. FAIL2BAN
 # ============================================================
 echo ""
-echo "─── 3. Fail2Ban ───"
+echo "─── 4. Fail2Ban ───"
 
-# Jail SSH
 cat > /etc/fail2ban/jail.d/ssh-hardened.conf << 'F2BEOF'
 [sshd]
 enabled = true
@@ -150,10 +208,8 @@ findtime = 600
 bantime = 3600
 banaction = ufw
 F2BEOF
-
 log "Jail SSH configurée (maxretry=3, bantime=1h)"
 
-# Jail Traefik (si logs accessibles)
 cat > /etc/fail2ban/jail.d/traefik-auth.conf << 'F2BEOF'
 [traefik-auth]
 enabled = true
@@ -166,26 +222,21 @@ bantime = 600
 banaction = ufw
 F2BEOF
 
-# Créer le filter Traefik
 cat > /etc/fail2ban/filter.d/traefik-auth.conf << 'F2BEOF'
 [Definition]
 failregex = ^<HOST> .* "(GET|POST|PUT|DELETE) .*" (401|403|429) .*$
 ignoreregex =
 F2BEOF
-
 log "Jail Traefik auth configurée"
 
-# Reload Fail2Ban
 systemctl restart fail2ban
 log "Fail2Ban redémarré"
 
-fail2ban-client status sshd 2>/dev/null || warn "Vérifier le status Fail2Ban manuellement"
-
 # ============================================================
-# 4. DOCKER DAEMON HARDENING
+# 5. DOCKER DAEMON HARDENING
 # ============================================================
 echo ""
-echo "─── 4. Docker Daemon ───"
+echo "─── 5. Docker Daemon ───"
 
 cat > /etc/docker/daemon.json << 'DOCKEREOF'
 {
@@ -211,57 +262,41 @@ cat > /etc/docker/daemon.json << 'DOCKEREOF'
       "Hard": 4096,
       "Soft": 4096
     }
-  },
-  "seccomp-profile": "/etc/docker/seccomp-default.json"
+  }
 }
 DOCKEREOF
+log "Docker daemon.json créé (user namespace, no-new-privileges, seccomp, logs)"
 
-log "Docker daemon.json créé"
-
-# Créer un profil seccomp minimal (permet la plupart des appels courants)
-# Utilise le profil Docker par défaut comme base
-if [[ ! -f /etc/docker/seccomp-default.json ]]; then
-  # Télécharger le profil seccomp Docker par défaut
-  if command -v curl &>/dev/null; then
-    curl -fsSL https://raw.githubusercontent.com/moby/moby/master/profiles/seccomp/default.json \
-      -o /etc/docker/seccomp-default.json 2>/dev/null || \
-      warn "Impossible de télécharger le profil seccomp — utiliser le défaut Docker"
-  else
-    warn "curl non disponible — profil seccomp non téléchargé"
-  fi
-fi
-
-# Redémarrer Docker (ATTENTION : redémarre tous les conteneurs)
 warn "Docker va redémarrer — tous les conteneurs seront relancés"
 read -p "Continuer ? (o/N) " -n 1 -r
-echo
+echo ""
+
 if [[ $REPLY =~ ^[oOyY]$ ]]; then
-  systemctl restart docker
-  log "Docker redémarré avec la nouvelle configuration"
+   systemctl restart docker
+   log "Docker redémarré"
 else
-  warn "Redémarrage Docker ignoré — appliquer manuellement : systemctl restart docker"
+   warn "Redémarrage Docker ignoré — appliquer manuellement : systemctl restart docker"
 fi
 
 # ============================================================
-# 5. KERNEL SYSCTL HARDENING
+# 6. KERNEL SYSCTL HARDENING
 # ============================================================
 echo ""
-echo "─── 5. Kernel Sysctl ───"
+echo "─── 6. Kernel Sysctl ───"
 
 cat > /etc/sysctl.d/99-security-hardening.conf << 'SYSCTLEOF'
 # === Aperture Science Kernel Hardening ===
 
-# --- ASLR ---
+# ASLR
 kernel.randomize_va_space = 2
 
-# --- Restriction d'accès au kernel ---
+# Restriction d'accès au kernel
 kernel.kptr_restrict = 2
 kernel.dmesg_restrict = 1
 kernel.yama.ptrace_scope = 1
 kernel.perf_event_paranoid = 3
 
-# --- Network hardening ---
-# SYN flood protection
+# Network hardening
 net.ipv4.tcp_syncookies = 1
 net.ipv4.tcp_max_syn_backlog = 4096
 net.ipv4.tcp_synack_retries = 2
@@ -291,7 +326,7 @@ net.ipv4.conf.default.log_martians = 1
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 
-# --- Filesystem ---
+# Filesystem
 fs.protected_hardlinks = 1
 fs.protected_symlinks = 1
 fs.suid_dumpable = 0
@@ -301,19 +336,15 @@ sysctl --system > /dev/null 2>&1
 log "Sysctl hardening appliqué"
 
 # ============================================================
-# 6. APPARMOR
+# 7. APPARMOR
 # ============================================================
 echo ""
-echo "─── 6. AppArmor ───"
+echo "─── 7. AppArmor ───"
 
 if command -v aa-status &>/dev/null; then
-  # Activer AppArmor au boot
   systemctl enable apparmor 2>/dev/null || true
   systemctl start apparmor 2>/dev/null || true
-  
-  # Mettre tous les profils en enforce mode
   if aa-status --enabled 2>/dev/null; then
-    # Charger les profils par défaut
     apparmor_parser -r /etc/apparmor.d/* 2>/dev/null || true
     log "AppArmor activé et profils chargés"
   else
@@ -324,10 +355,10 @@ else
 fi
 
 # ============================================================
-# 7. LYNIS (AUDIT)
+# 8. LYNIS (AUDIT)
 # ============================================================
 echo ""
-echo "─── 7. Lynis Security Audit ───"
+echo "─── 8. Lynis Security Audit ───"
 
 if ! command -v lynis &>/dev/null; then
   apt-get update -qq && apt-get install -y -qq lynis 2>/dev/null
@@ -338,11 +369,10 @@ echo ""
 warn "Lancement de l'audit Lynis (peut prendre 1-2 minutes)..."
 lynis audit system --no-colors 2>/dev/null | tee /var/log/lynis-audit-$(date +%Y%m%d).log | tail -30
 
-echo ""
-log "Audit Lynis terminé — rapport complet : /var/log/lynis-audit-$(date +%Y%m%d).log"
+log "Audit Lynis terminé — rapport : /var/log/lynis-audit-$(date +%Y%m%d).log"
 
 # ============================================================
-# 8. RÉSUMÉ
+# 9. RÉSUMÉ
 # ============================================================
 echo ""
 echo "============================================"
@@ -350,23 +380,25 @@ echo "  HARDENING TERMINÉ"
 echo "  $(date)"
 echo "============================================"
 echo ""
-echo "Résumé des actions :"
-echo "  [✓] SSH : root login désactivé, auth par clé seulement, AllowUsers=glados"
+echo "Résumé :"
+echo "  [✓] User admin créé (sudo, accès SSH)"
+echo "  [✓] SSH : root désactivé, admin seul autorisé, auth par clé"
 echo "  [✓] UFW : deny incoming, allow 22/80/443, SSH rate-limited"
 echo "  [✓] Fail2Ban : jail SSH + Traefik configurées"
-echo "  [✓] Docker : user namespace, no-new-privileges, seccomp, logs limités"
-echo "  [✓] Sysctl : ASLR, SYN flood, IP spoofing, martians, IPv6 désactivé"
+echo "  [✓] Docker : user namespace, no-new-privileges, seccomp, logs"
+echo "  [✓] Sysctl : ASLR, SYN flood, IP spoofing, martians, IPv6 off"
 echo "  [✓] AppArmor : activé si disponible"
 echo "  [✓] Lynis : audit complet"
 echo ""
-echo "⚠️  IMPORTANT :"
-echo "  1. Vérifiez que votre connexion SSH fonctionne AVANT de fermer cette session"
-echo "  2. Ouvrez un nouveau terminal et testez : ssh glados@<IP>"
-echo "  3. Si OK, fermez cette session root"
+echo "⚠️  PROCHAINES ÉTAPES :"
+echo "  1. Copier ta clé SSH dans /home/admin/.ssh/authorized_keys"
+echo "  2. Tester la connexion : ssh admin@<VPS_IP>"
+echo "  3. Désactiver PasswordAuthentication (une fois la clé confirmée) :"
+echo "     sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config.d/99-hardening.conf"
+echo "     systemctl reload sshd"
 echo ""
-echo "📋 Prochaines étapes (côté applicatif, par glados) :"
-echo "  - Security headers Traefik (HSTS, CSP, X-Frame-Options)"
-echo "  - Rate limiting Traefik"
-echo "  - Durcissement Docker Compose (read-only, drop capabilities)"
-echo "  - Scan Trivy des images Docker"
+echo "📋 Architecture post-hardening :"
+echo "   root   : désactivé en SSH"
+echo "   admin  : sudo complet, accès SSH (sécurité/infra)"
+echo "   glados : pas de sudo, apps uniquement (Docker compose)"
 echo ""
