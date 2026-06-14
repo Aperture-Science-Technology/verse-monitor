@@ -1,0 +1,75 @@
+# ============================================================
+# Traefik Dynamic Configuration — Security Middlewares
+# À monter dans Traefik via bind mount ou config volume
+# ============================================================
+
+http:
+  middlewares:
+    # ─── Security Headers ───────────────────────────────
+    sec-headers-secure:
+      headers:
+        # HSTS — forcer HTTPS pendant 1 an (31536000s)
+        # Nécessite : pas de mixed content, tout en HTTPS
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        # Clickjacking protection
+        customFrameOptionsValue: "SAMEORIGIN"
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"
+        # Content Security Policy (à adapter selon les besoins)
+        contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+        # Supprimer les headers qui leak de l'info
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""
+        # Ne pas envoyer le header X-Robots-Tag sauf si explicitement demandé
+        # robotsTag: "noindex, nofollow"
+
+    # ─── Rate Limiting ──────────────────────────────────
+    rate-limit-global:
+      rateLimit:
+        average: 100    # 100 requêtes/seconde en moyenne
+        period: 1s
+        burst: 200      # burst max de 200 requêtes simultanées
+        sourceCriterion:
+          ipStrategy:
+            depth: 1   # Prendre la dernière IP du X-Forwarded-For
+
+    # ─── Rate Limiting strict (auth endpoints) ──────────
+    rate-limit-auth:
+      rateLimit:
+        average: 5     # 5 requêtes/seconde
+        period: 1s
+        burst: 10
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # ─── Compress ───────────────────────────────────────
+    compress-responses:
+      compress: {}
+
+    # ─── Chaîne complète de sécurité ────────────────────
+    # Combine : rate-limit → compress → security-headers
+    security-chain:
+      chain:
+        middlewares:
+          - rate-limit-global
+          - compress-responses
+          - sec-headers-secure
+
+  routers:
+    # ─── Dashboard Traefik (protégée) ──────────────────
+    dashboard-secure:
+      entryPoints:
+        - websecure
+      rule: "Host(`traefik.aperture-agency.org`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      service: api@internal
+      tls:
+        certResolver: cf
+      middlewares:
+        - rate-limit-auth@file
+        - sec-headers-secure@file
