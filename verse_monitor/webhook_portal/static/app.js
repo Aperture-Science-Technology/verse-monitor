@@ -350,8 +350,21 @@ function renderRegister(app){
 
   // 2. Webhook URL
   var g2 = document.createElement('div'); g2.className = 'form-group';
-  g2.innerHTML = '<div class="section-label-form"><span class="section-num">2</span><label>' + _t('reg.step2') + '</label></div><input class="form-control" id="f-url" placeholder="' + _t('reg.step2Ph') + '"><div class="form-hint">' + _t('reg.step2Hint') + '</div>';
+  g2.innerHTML = '<div class="section-label-form"><span class="section-num">2</span><label>' + _t('reg.step2') + '</label></div><input class="form-control" id="f-url" placeholder="' + _t('reg.step2Ph') + '"><div class="form-hint" id="url-hint">' + _t('reg.step2Hint') + '</div><div class="form-hint telegram-hint" id="telegram-hint" style="display:none;margin-top:6px;padding:10px 14px;background:rgba(38,165,228,0.08);border:1px solid rgba(38,165,228,0.2);border-radius:8px;font-size:0.85em;line-height:1.5;color:var(--text2)">' + _t('reg.step2TelegramHint') + '</div>';
   card.appendChild(g2);
+
+  // Show/hide Telegram hint when format changes
+  function updateUrlHint(){
+    var isTele = selectedFormat === 'telegram';
+    var th = $('#telegram-hint');
+    var uh = $('#url-hint');
+    if(th) th.style.display = isTele ? 'block' : 'none';
+    if(uh) uh.style.display = isTele ? 'none' : 'block';
+    var urlInput = $('#f-url');
+    if(urlInput){
+      urlInput.placeholder = isTele ? 'https://votre-serveur.com/telegram-webhook' : 'https://discord.com/api/webhooks/…';
+    }
+  }
 
   // 3. Output Format
   var g3 = document.createElement('div'); g3.className = 'form-group';
@@ -372,6 +385,7 @@ function renderRegister(app){
     fc.addEventListener('click', function(){
       fmtGrid.querySelectorAll('.format-card').forEach(function(c){ c.classList.remove('selected'); });
       fc.classList.add('selected'); selectedFormat = f.id;
+      updateUrlHint();
     });
     fmtGrid.appendChild(fc);
   });
