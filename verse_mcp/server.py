@@ -149,7 +149,7 @@ async def health(request: Request) -> JSONResponse:
             "last_ingestion": last_ingestion,
             "ingestion_stats": ingestion_stats,
             "events_stored": events_stored,
-            "uptime_sources": ["comm_links", "devtracker", "roadmap_release_view", "spectrum"],
+            "uptime_sources": ["comm_links", "devtracker", "roadmap_release_view"],
         },
     })
 

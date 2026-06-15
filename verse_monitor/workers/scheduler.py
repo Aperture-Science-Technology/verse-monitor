@@ -15,19 +15,17 @@ from verse_monitor.config import settings
 from verse_monitor.sources.roadmap import RoadmapSource
 from verse_monitor.sources.devtracker import DevtrackerSource
 from verse_monitor.sources.comm_links import CommLinksSource
-from verse_monitor.sources.spectrum import SpectrumSource
 
 logger = logging.getLogger(__name__)
 
 
 def build_scheduler(r: redis.Redis) -> AsyncIOScheduler:
-    """Construit et configure le scheduler avec les 4 sources RSI."""
+    """Construit et configure le scheduler avec les 3 sources RSI."""
     scheduler = AsyncIOScheduler()
 
     roadmap = RoadmapSource()
     devtracker = DevtrackerSource()
     comm_links = CommLinksSource()
-    spectrum = SpectrumSource()
 
     scheduler.add_job(
         roadmap.poll, "interval",
@@ -44,16 +42,10 @@ def build_scheduler(r: redis.Redis) -> AsyncIOScheduler:
         seconds=settings.POLL_COMMLINKS_INTERVAL,
         args=[r], max_instances=1, id="comm_links",
     )
-    scheduler.add_job(
-        spectrum.poll, "interval",
-        seconds=settings.POLL_SPECTRUM_INTERVAL,
-        args=[r], max_instances=1, id="spectrum",
-    )
 
     logger.info(
         f"Scheduler configuré — roadmap:{settings.POLL_ROADMAP_INTERVAL}s "
         f"devtracker:{settings.POLL_DEVTRACKER_INTERVAL}s "
-        f"commlinks:{settings.POLL_COMMLINKS_INTERVAL}s "
-        f"spectrum:{settings.POLL_SPECTRUM_INTERVAL}s"
+        f"commlinks:{settings.POLL_COMMLINKS_INTERVAL}s"
     )
     return scheduler
