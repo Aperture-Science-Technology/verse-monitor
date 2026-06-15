@@ -360,7 +360,7 @@ def create_app() -> FastAPI:
         try:
             from verse_monitor.storage.qdrant_store import QdrantStore
             qstore = QdrantStore()
-            qdrant_events = qstore.count()
+            qdrant_events = await qstore.count()
         except Exception:
             pass
 
