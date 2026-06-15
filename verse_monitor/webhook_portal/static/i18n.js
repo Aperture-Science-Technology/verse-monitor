@@ -14,7 +14,7 @@ var I18N = (function(){
     // ── HERO ──
     'hero.badge':      { fr: 'Plateforme de veille Star Citizen', en: 'Star Citizen Intelligence Platform' },
     'hero.title':      { fr: 'Veille Star Citizen en temps réel, livrée partout', en: 'Real-time Star Citizen intelligence, delivered anywhere' },
-    'hero.subtitle':   { fr: 'Suivez les changements de la roadmap, patch notes, Comm-Links et dev posts — livrés sur Discord, Slack, Telegram ou webhook en temps réel.', en: 'Track roadmap changes, patch notes, Comm-Links, and dev posts — delivered to Discord, Slack, Telegram, or webhook in real-time.' },
+    'hero.subtitle':   { fr: 'Suivez les changements de la roadmap, patch notes, Comm-Links et dev posts — livrés sur Discord ou webhook en temps réel.', en: 'Track roadmap changes, patch notes, Comm-Links, and dev posts — delivered to Discord or webhook in real-time.' },
     'hero.cta':        { fr: 'Créer un abonnement gratuit', en: 'Create Free Subscription' },
     'hero.mcpBtn':     { fr: 'Utiliser comme outil MCP →', en: 'Use as MCP Tool →' },
     'hero.hint':       { fr: 'Gratuit · Sans compte · 30 secondes', en: 'Free · No account needed · Takes 30 seconds' },
@@ -27,17 +27,17 @@ var I18N = (function(){
     'features.title':  { fr: "Tout ce qu'il faut pour rester informé", en: 'Everything you need to stay informed' },
     'features.subtitle': { fr: 'Surveillez chaque aspect du développement Star Citizen avec des filtres granulaires et une livraison en temps réel.', en: 'Monitor every aspect of Star Citizen development with granular filters and real-time delivery.' },
     'features.0.title': { fr: 'Veille en temps réel', en: 'Real-time Monitoring' },
-    'features.0.desc':  { fr: 'Interroge les sources RSI toutes les quelques minutes. Détecte les mises à jour, Comm-Links et dev posts dès leur publication.', en: 'Polls RSI sources every few minutes for changes. Detect updates, new Comm-Links, and dev posts as they happen.' },
+    'features.0.desc':  { fr: 'Surveille les sources RSI toutes les quelques minutes. Détecte les mises à jour, Comm-Links et dev posts dès leur publication.', en: 'Polls RSI sources every few minutes. Detects updates, new Comm-Links, and dev posts as they happen.' },
     'features.1.title': { fr: 'Filtrage intelligent', en: 'Smart Filtering' },
     'features.1.desc':  { fr: "Mots-clés, catégories, types d'événements et priorités. Recevez uniquement les alertes qui vous intéressent.", en: 'Keywords, categories, event types, and priority levels. Only receive alerts that match what you actually care about.' },
     'features.2.title': { fr: 'Livraison multiplateforme', en: 'Multi-Platform Delivery' },
-    'features.2.desc':  { fr: 'Discord, Slack, Telegram ou JSON webhook. Formatage natif pour chaque plateforme avec embeds et contenu riche.', en: 'Discord, Slack, Telegram, or raw JSON webhooks. Native formatting for each platform with embeds and rich content.' },
+    'features.2.desc':  { fr: 'Discord ou JSON webhook. Formatage natif pour Discord avec embeds et contenu riche. JSON générique pour tout autre usage.', en: 'Discord or JSON webhook. Native formatting for Discord with embeds and rich content. Generic JSON for everything else.' },
     'features.3.title': { fr: 'Recherche vectorielle (Qdrant)', en: 'Vector Search (Qdrant)' },
     'features.3.desc':  { fr: 'Recherche sémantique dans les données Star Citizen ingérées. Vaisseaux, lore, équipements — recherche en langage naturel.', en: 'Semantic search across ingested Star Citizen data. Ships, lore, equipment — searchable via natural language.' },
     'features.4.title': { fr: 'Intégration MCP', en: 'MCP Integration' },
     'features.4.desc':  { fr: 'Utilisez Verse Monitor comme outil MCP dans Claude Code, Cursor et autres clients compatibles MCP.', en: 'Use Verse Monitor as an MCP tool in Claude Code, Cursor, and other MCP-compatible clients.' },
     'features.5.title': { fr: 'Dashboard de livraison', en: 'Delivery Dashboard' },
-    'features.5.desc':  { fr: 'Suivez livraisons, échecs et limites de débit par abonnement. Pings de test et gestion complète.', en: 'Track deliveries, failures, and rate limits per subscription. Test pings and full configuration management.' },
+    'features.5.desc':  { fr: 'Suivez les livraisons, échecs et limites de débit par abonnement. Pings de test et gestion complète.', en: 'Track deliveries, failures, and rate limits per subscription. Test pings and full configuration management.' },
     
     // ── MCP SECTION ──
     'mcp.label':       { fr: 'Intégration MCP', en: 'MCP Integration' },
@@ -79,7 +79,7 @@ var I18N = (function(){
     'pricing.free.0':     { fr: 'Abonnements webhook illimités', en: 'Unlimited webhook subscriptions' },
     'pricing.free.1':     { fr: "Tous types d'événements et filtres", en: 'All event types and filters' },
     'pricing.free.2':     { fr: '30 alertes/heure par abonnement', en: '30 alerts/hour per subscription' },
-    'pricing.free.3':     { fr: 'Discord, Slack, Telegram, Webhook', en: 'Discord, Slack, Telegram, Webhook' },
+    'pricing.free.3':     { fr: 'Discord, Webhook JSON', en: 'Discord, JSON Webhook' },
     'pricing.free.4':     { fr: 'Dashboard et statistiques', en: 'Delivery dashboard & stats' },
     'pricing.free.btn':   { fr: 'Commencer — Gratuit', en: 'Get Started — Free' },
     'pricing.pro.name':   { fr: 'Pro', en: 'Pro' },
@@ -158,7 +158,7 @@ var I18N = (function(){
     
     // ── MODALS ──
     'modal.deleteTitle':  { fr: "Supprimer l'abonnement", en: 'Delete Subscription' },
-    'modal.deleteBody':   { fr: 'Êtes-vous sûr ? Cela arrêtera toutes les alertes et est irréversible.', en: 'Are you sure? This will permanently stop all alerts and cannot be undone.' },
+    'modal.deleteBody':   { fr: 'Êtes-vous sûr ? Cela arrêtera toutes les alertes et c\\'est irréversible.', en: 'Are you sure? This will permanently stop all alerts and cannot be undone.' },
     'modal.cancel':       { fr: 'Annuler', en: 'Cancel' },
     'modal.confirm':      { fr: 'Supprimer', en: 'Delete' },
     'modal.apiKeyTitle':  { fr: '🔑 Accès au dashboard', en: '🔑 Access Dashboard' },
@@ -257,9 +257,9 @@ var I18N = (function(){
     'et.monthly_report':        { fr: 'Rapports mensuels', en: 'Monthly Reports' },
     
     // ── PRIORITY LABELS ──
-    'prio.LOW':      { fr: 'Toutes', en: 'All' },
+    'prio.LOW':      { fr: 'Basse', en: 'Low' },
     'prio.MEDIUM':   { fr: 'Standard', en: 'Standard' },
-    'prio.HIGH':     { fr: 'Majeur', en: 'Major only' },
+    'prio.HIGH':     { fr: 'Haute', en: 'High' },
     'prio.CRITICAL': { fr: 'Critique', en: 'Critical' },
     
     // ── CATEGORY LABELS ──
@@ -267,7 +267,7 @@ var I18N = (function(){
     'cat.ship':      { fr: 'Vaisseaux', en: 'Ships' },
     'cat.gameplay':  { fr: 'Gameplay', en: 'Gameplay' },
     'cat.tech':      { fr: 'Technologie', en: 'Technology' },
-    'cat.event':     { fr: 'Événements', en: 'Events' },
+    'cat.event':     { fr: 'Événements en jeu', en: 'In-Game Events' },
     'cat.lore':      { fr: 'Lore', en: 'Lore' },
 
     // ── EVENT TYPE DESCRIPTIONS ──
@@ -283,10 +283,10 @@ var I18N = (function(){
     'etd.monthly_report':        { fr: 'Rapports de production mensuels', en: 'Monthly production reports' },
 
     // ── PRIORITY DESCRIPTIONS ──
-    'priod.LOW':      { fr: 'Toutes les alertes sans importance', en: 'Every alert regardless of importance' },
-    'priod.MEDIUM':   { fr: 'Ignorer les mises à jour mineures', en: 'Skip minor updates, keep meaningful changes' },
-    'priod.HIGH':     { fr: 'Événements significatifs uniquement', en: 'Only significant events (releases, delays, patches)' },
-    'priod.CRITICAL': { fr: 'Alertes critiques uniquement', en: 'Only critical alerts (major releases, breaking changes)' },
+    'priod.LOW':      { fr: 'Toutes les alertes, même mineures', en: 'All alerts including minor ones' },
+    'priod.MEDIUM':   { fr: 'Ignorer les alertes mineures, garder les changements significatifs', en: 'Skip minor alerts, keep meaningful changes' },
+    'priod.HIGH':     { fr: 'Événements importants uniquement (sorties, retards, patches)', en: 'Only important events (releases, delays, patches)' },
+    'priod.CRITICAL': { fr: 'Alertes critiques uniquement (sorties majeures, changements majeurs)', en: 'Critical alerts only (major releases, breaking changes)' },
 
     // ── CATEGORY DESCRIPTIONS ──
     'catd.all':       { fr: 'Aucun filtre — tout recevoir', en: 'No category filter — receive everything' },
