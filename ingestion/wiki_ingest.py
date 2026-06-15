@@ -18,11 +18,13 @@ Usage:
 """
 
 import asyncio
+import hashlib
 import json
 import os
 import sys
 import time
 import warnings
+from datetime import datetime, timezone
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
@@ -54,7 +56,7 @@ QDRANT_API_KEY = _env("QDRANT_API_KEY", "")
 # Pagination
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
 API_TIMEOUT = 300.0   # seconds (galactapedia can be very slow)
-MAX_PAGES = 5          # max pages per source (to avoid extremely long runs)
+MAX_PAGES = 50         # max pages per source (to avoid extremely long runs)
 
 # Rate limiting
 RATE_LIMIT_DELAY = 0.2  # seconds between API calls
@@ -427,12 +429,28 @@ def init_qdrant():
         print(f"Collection '{VECTOR_COLLECTION_NAME}' already exists")
 
 
-async def upsert_chunks(chunks: list[str], source: str, url: str, category: str, patch_version: str | None = None):
+async def upsert_chunks(chunks: list[str], source: str, url: str, category: str, patch_version: str | None = None, source_modified_at: str | None = None):
     """Embed and upsert chunks into Qdrant."""
     from qdrant_client.http import models
 
+    indexed_at = datetime.now(timezone.utc).isoformat()
     points = []
     for chunk_text in chunks:
+        content_hash = hashlib.sha256(chunk_text.encode()).hexdigest()
+
+        # Skip chunks whose content already exists in Qdrant
+        existing, _ = await asyncio.to_thread(
+            qdrant_client.scroll,
+            collection_name=VECTOR_COLLECTION_NAME,
+            scroll_filter=models.Filter(
+                must=[models.FieldCondition(key="content_hash", match=models.MatchValue(value=content_hash))]
+            ),
+            limit=1,
+            with_payload=False,
+        )
+        if existing:
+            continue
+
         embedding = await generate_embedding(chunk_text)
         uid = uuid5(NAMESPACE_URL, f"{category}:{source}:{chunk_text[:100]}")
         payload = {
@@ -440,6 +458,9 @@ async def upsert_chunks(chunks: list[str], source: str, url: str, category: str,
             "source": source,
             "url": url,
             "category": category,
+            "indexed_at": indexed_at,
+            "source_modified_at": source_modified_at,
+            "content_hash": content_hash,
         }
         if patch_version:
             payload["patch_version"] = patch_version
@@ -493,7 +514,8 @@ async def process_item(item: dict, category: str, endpoint: str) -> int:
 
         # Embed and store
         source = f"api:{endpoint.split('?')[0].strip('/')}:{name}"
-        await upsert_chunks(chunks, source=source, url=source_url, category=category, patch_version=patch_version)
+        source_modified_at = item.get("updated_at", None)
+        await upsert_chunks(chunks, source=source, url=source_url, category=category, patch_version=patch_version, source_modified_at=source_modified_at)
 
         return len(chunks)
 
@@ -539,13 +561,26 @@ async def ingest_source(source_config: dict) -> int:
 # Main
 # ---------------------------------------------------------------------------
 
-async def run_ingestion():
-    """Run full ingestion from all API v2 sources."""
+async def run_ingestion_cycle(categories: list[str] | None = None) -> dict:
+    """Run an ingestion cycle, optionally filtered to specific source categories.
+
+    Returns stats dict with keys: items_fetched, chunks_created,
+    embeddings_generated, errors, elapsed_seconds.
+    """
     global api_client, embedding_client, redis_client
 
-    stats["start_time"] = time.time()
+    # Reset global stats for this cycle
+    stats.update({
+        "items_fetched": 0,
+        "chunks_created": 0,
+        "embeddings_generated": 0,
+        "embeddings_cached": 0,
+        "errors": 0,
+        "start_time": time.time(),
+    })
 
-    # Init clients
+    sources = SOURCES if categories is None else [s for s in SOURCES if s["category"] in categories]
+
     api_client = httpx.AsyncClient(follow_redirects=True)
     embedding_client = httpx.AsyncClient()
 
@@ -563,14 +598,11 @@ async def run_ingestion():
     print(f"API: {API_BASE}")
     print(f"Embeddings: {EMBEDDING_MODEL} via {EMBEDDING_BASE_URL}")
     print(f"API key present: {bool(OPENROUTER_API_KEY)}")
-    print(f"Sources: {len(SOURCES)}")
+    print(f"Sources: {len(sources)} (filtered by categories={categories})")
 
-    total_chunks = 0
-    for source in SOURCES:
-        n = await ingest_source(source)
-        total_chunks += n
+    for source in sources:
+        await ingest_source(source)
 
-    # Summary
     elapsed = time.time() - stats["start_time"]
     print(f"\n{'='*60}")
     print(f"INGESTION COMPLETE")
@@ -584,16 +616,27 @@ async def run_ingestion():
     cost = stats['embeddings_generated'] * 0.00002
     print(f"Cost estimate:    ~${cost:.4f}")
 
-    # Verify
     count = qdrant_client.count(collection_name=VECTOR_COLLECTION_NAME)
     print(f"Qdrant points:    {count.count}")
 
-    # Cleanup
     await api_client.aclose()
     await embedding_client.aclose()
     if redis_client:
         await redis_client.aclose()
     qdrant_client.close()
+
+    return {
+        "items_fetched": stats["items_fetched"],
+        "chunks_created": stats["chunks_created"],
+        "embeddings_generated": stats["embeddings_generated"],
+        "errors": stats["errors"],
+        "elapsed_seconds": elapsed,
+    }
+
+
+async def run_ingestion():
+    """Run full ingestion from all API v2 sources (backward-compatible entry point)."""
+    await run_ingestion_cycle(categories=None)
 
 
 if __name__ == "__main__":

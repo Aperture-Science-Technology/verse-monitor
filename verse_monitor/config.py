@@ -23,10 +23,14 @@ class Settings(BaseSettings):
     DISCORD_WEBHOOK_HIGH: str = ""
     DISCORD_WEBHOOK_MEDIUM: str = ""
 
+    # Ingestion interval (secondes)
+    INGESTION_INTERVAL: int = 86400  # 24h
+
     # Intervals de polling (secondes)
     POLL_ROADMAP_INTERVAL: int = 300
     POLL_DEVTRACKER_INTERVAL: int = 120
     POLL_COMMLINKS_INTERVAL: int = 300
+    POLL_SPECTRUM_INTERVAL: int = 180
 
     # Redis Stream
     STREAM_NAME: str = "sc:events"
