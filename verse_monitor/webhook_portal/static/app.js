@@ -176,7 +176,7 @@ function renderHome(app){
       '<p><strong>' + _t('scope.available') + '</strong> ' + _t('scope.availableText') + '</p>' +
       '<p><strong>' + _t('scope.improving') + '</strong> ' + _t('scope.improvingText') + '</p>' +
       '<p><strong>' + _t('scope.missing') + '</strong> ' + _t('scope.missingText') + '</p>' +
-      '<div class="disclaimer-links"><button class="footer-link-btn" id="sources-docs-link">' + _t('scope.docsLink') + '</button><a href="https://github.com/Aperture-Science-Technology/verse-mcp/issues" target="_blank" rel="noopener">' + _t('scope.requestLink') + '</a><a href="mailto:contact@aperture-agency.org">' + _t('scope.contactLink') + '</a></div>' +
+      '<div class="disclaimer-links"><button class="footer-link-btn" id="sources-docs-link">' + _t('scope.docsLink') + '</button><a href="https://github.com/Aperture-Science-Technology/verse-monitor/issues" target="_blank" rel="noopener">' + _t('scope.requestLink') + '</a><a href="mailto:contact@aperture-agency.org">' + _t('scope.contactLink') + '</a></div>' +
     '</div>';
   app.appendChild(disclaimerSection);
 

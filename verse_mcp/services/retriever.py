@@ -1,5 +1,6 @@
 """Retriever service (Qdrant)."""
 
+import asyncio
 import os
 from dataclasses import dataclass
 from qdrant_client import QdrantClient
@@ -62,7 +63,8 @@ async def search_chunks(
             must=[models.FieldCondition(key="category", match=models.MatchValue(value=category))]
         )
     
-    response = _qdrant_client.query_points(
+    response = await asyncio.to_thread(
+        _qdrant_client.query_points,
         collection_name=VECTOR_COLLECTION_NAME,
         query=embedding,
         limit=top_k,

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" width="900" height="200">
+  <defs>
+    <radialGradient id="glow" cx="11%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#0B1120" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="200" rx="24" ry="24" fill="#0B1120"/>
+  <rect width="900" height="200" rx="24" ry="24" fill="url(#glow)"/>
+
+  <!-- Icon group — left side -->
+  <g transform="translate(70,100)">
+
+    <!-- Radar rings -->
+    <circle cx="0" cy="0" r="65" fill="none" stroke="#3B82F6" stroke-width="1" opacity="0.2"/>
+    <circle cx="0" cy="0" r="45" fill="none" stroke="#3B82F6" stroke-width="1" opacity="0.2"/>
+    <circle cx="0" cy="0" r="25" fill="none" stroke="#3B82F6" stroke-width="1" opacity="0.2"/>
+
+    <!-- Sweep wedge -->
+    <path d="M 0,0 L 0,-65 A 65,65 0 0,1 46,-46 Z" fill="#3B82F6" opacity="0.12"/>
+
+    <!-- Sweep line -->
+    <line x1="0" y1="0" x2="0" y2="-55" stroke="#60A5FA" stroke-width="1.5" opacity="0.5"/>
+
+    <!-- Orbit arc -->
+    <ellipse cx="0" cy="0" rx="75" ry="22" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity="0.25" transform="rotate(-15)"/>
+
+    <!-- Center core -->
+    <circle cx="0" cy="0" r="6" fill="#60A5FA"/>
+    <circle cx="0" cy="0" r="12" fill="#60A5FA" opacity="0.12"/>
+
+    <!-- Blips -->
+    <circle cx="52" cy="-22" r="3.5" fill="#60A5FA" opacity="0.7">
+      <animate attributeName="opacity" values="0.7;0.3;0.7" dur="3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- "Verse" text -->
+  <text x="165" y="112" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="56" font-weight="700" fill="#E2E8F0" letter-spacing="-1">Verse</text>
+
+  <!-- "Monitor" text -->
+  <text x="430" y="112" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="56" font-weight="300" fill="#60A5FA" letter-spacing="-1">Monitor</text>
+
+  <!-- Subtle underline accent -->
+  <line x1="165" y1="130" x2="710" y2="130" stroke="#3B82F6" stroke-width="1" opacity="0.2"/>
+  <line x1="430" y1="130" x2="710" y2="130" stroke="#60A5FA" stroke-width="1.5" opacity="0.4"/>
+</svg>

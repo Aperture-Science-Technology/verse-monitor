@@ -84,7 +84,8 @@ class QdrantStore:
             "diff": event.diff,
         }
 
-        self._client.upsert(
+        await asyncio.to_thread(
+            self._client.upsert,
             collection_name=COLLECTION,
             points=[
                 models.PointStruct(
@@ -115,7 +116,8 @@ class QdrantStore:
             ]
             qdrant_filter = models.Filter(must=conditions)
 
-        results = self._client.search(
+        results = await asyncio.to_thread(
+            self._client.search,
             collection_name=COLLECTION,
             query_vector=vector,
             limit=limit,
@@ -128,15 +130,16 @@ class QdrantStore:
             for hit in results
         ]
 
-    def delete_event(self, event_id: str) -> None:
-        self._client.delete(
+    async def delete_event(self, event_id: str) -> None:
+        await asyncio.to_thread(
+            self._client.delete,
             collection_name=COLLECTION,
             points_selector=models.PointIdsList(points=[event_id]),
         )
         logger.debug("Deleted event %s from Qdrant", event_id)
 
-    def count(self) -> int:
-        result = self._client.count(collection_name=COLLECTION, exact=True)
+    async def count(self) -> int:
+        result = await asyncio.to_thread(self._client.count, collection_name=COLLECTION, exact=True)
         return result.count
 
 
