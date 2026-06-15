@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from verse_monitor.config import settings
-from verse_monitor.models import EventType, Priority
+from verse_monitor.models import EventType, Priority, SCEvent
 from verse_monitor.webhook_portal.formatters import get_formatter
 from verse_monitor.webhook_portal.models import Subscription
 from verse_monitor.webhook_portal.store import SubscriptionStore
@@ -127,22 +127,22 @@ def _sub_to_response(sub: Subscription, include_api_key: bool = False) -> dict[s
 async def _send_test_ping(store: SubscriptionStore, sub: Subscription) -> tuple[bool, int]:
     """Send a test ping to the webhook. Returns (success, http_code)."""
     formatter = get_formatter(sub.format)
-    test_event_data = {
-        "id": "test",
-        "type": "test",
-        "priority": "MEDIUM",
-        "source": "verse-monitor",
-        "title": "🔧 Verse Monitor — Test Ping",
-        "url": "https://verse-monitor.aperture-agency.org",
-        "diff": {},
-        "keywords": [],
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "content_hash": "",
-        "patch_version": None,
-        "author": "Verse Monitor",
-        "category": None,
-    }
-    payload = {"content": "🔧 **Verse Monitor — Test Ping**\n\nYour webhook subscription is configured correctly! You will start receiving Star Citizen event alerts soon."}
+    test_event = SCEvent(
+        id="test",
+        type=EventType.PATCH_NOTES_LIVE,
+        priority=Priority.MEDIUM,
+        source="verse-monitor",
+        title="🔧 Verse Monitor — Test Ping",
+        url="https://verse-monitor.aperture-agency.org",
+        diff={},
+        keywords=[],
+        timestamp=datetime.now(timezone.utc),
+        content_hash="",
+        patch_version=None,
+        author="Verse Monitor",
+        category=None,
+    )
+    payload = formatter(test_event)
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(sub.webhook_url, json=payload)
@@ -342,12 +342,18 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/stats")
     async def get_global_stats():
         """Get global platform statistics for the documentation page."""
-        store = _get_store()
-        subs = await store.get_all_active()
+        try:
+            store = _get_store()
+            subs = await store.get_all_active()
 
-        total_deliveries = sum(s.total_deliveries for s in subs)
-        total_failures = sum(s.failure_count for s in subs)
-        total_subs = len(subs)
+            total_deliveries = sum(s.total_deliveries for s in subs)
+            total_failures = sum(s.failure_count for s in subs)
+            total_subs = len(subs)
+        except Exception:
+            logger.exception("Failed to fetch subscription stats")
+            total_subs = 0
+            total_deliveries = 0
+            total_failures = 0
 
         # Get Qdrant event count if available
         qdrant_events = 0
