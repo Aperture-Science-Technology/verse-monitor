@@ -42,32 +42,32 @@ function showToast(msg, type){
 
 // ── DATA ──
 var EVENT_TYPES = [
-  { id: 'roadmap_card_added',    label: _t('et.roadmap_card_added'),    desc: 'New cards appearing on the roadmap' },
-  { id: 'roadmap_card_released', label: _t('et.roadmap_card_released'), desc: 'Cards moving to a LIVE patch' },
-  { id: 'roadmap_card_delayed',  label: _t('et.roadmap_card_delayed'),  desc: 'Cards pushed to a later patch' },
-  { id: 'roadmap_card_removed',  label: _t('et.roadmap_card_removed'),  desc: 'Cards removed from the roadmap' },
-  { id: 'roadmap_card_updated',  label: _t('et.roadmap_card_updated'),  desc: 'Card details changed (title, description, patch)' },
-  { id: 'patch_notes_live',      label: _t('et.patch_notes_live'),      desc: 'Official LIVE patch notes publication' },
-  { id: 'comm_link_published',   label: _t('et.comm_link_published'),   desc: 'RSI Comm-Links (weekly reports, sneak peeks)' },
-  { id: 'devtracker_post',       label: _t('et.devtracker_post'),       desc: 'Individual developer posts on the progress tracker' },
-  { id: 'twisc_published',       label: _t('et.twisc_published'),       desc: 'Weekly newsletter "This Week in Star Citizen"' },
-  { id: 'monthly_report',        label: _t('et.monthly_report'),        desc: 'Monthly production reports' },
+  { id: 'roadmap_card_added',    label: _t('et.roadmap_card_added'),    desc: _t('etd.roadmap_card_added') },
+  { id: 'roadmap_card_released', label: _t('et.roadmap_card_released'), desc: _t('etd.roadmap_card_released') },
+  { id: 'roadmap_card_delayed',  label: _t('et.roadmap_card_delayed'),  desc: _t('etd.roadmap_card_delayed') },
+  { id: 'roadmap_card_removed',  label: _t('et.roadmap_card_removed'),  desc: _t('etd.roadmap_card_removed') },
+  { id: 'roadmap_card_updated',  label: _t('et.roadmap_card_updated'),  desc: _t('etd.roadmap_card_updated') },
+  { id: 'patch_notes_live',      label: _t('et.patch_notes_live'),      desc: _t('etd.patch_notes_live') },
+  { id: 'comm_link_published',   label: _t('et.comm_link_published'),   desc: _t('etd.comm_link_published') },
+  { id: 'devtracker_post',       label: _t('et.devtracker_post'),       desc: _t('etd.devtracker_post') },
+  { id: 'twisc_published',       label: _t('et.twisc_published'),       desc: _t('etd.twisc_published') },
+  { id: 'monthly_report',        label: _t('et.monthly_report'),        desc: _t('etd.monthly_report') },
 ];
 
 var PRIORITIES = [
-  { id: 'LOW',      emoji: '🔵', label: _t('prio.LOW'),      desc: 'Every alert regardless of importance' },
-  { id: 'MEDIUM',   emoji: '🟡', label: _t('prio.MEDIUM'),   desc: 'Skip minor updates, keep meaningful changes' },
-  { id: 'HIGH',     emoji: '🟠', label: _t('prio.HIGH'),     desc: 'Only significant events (releases, delays, patches)' },
-  { id: 'CRITICAL', emoji: '🔴', label: _t('prio.CRITICAL'), desc: 'Only critical alerts (major releases, breaking changes)' },
+  { id: 'LOW',      emoji: '🔵', label: _t('prio.LOW'),      desc: _t('priod.LOW') },
+  { id: 'MEDIUM',   emoji: '🟡', label: _t('prio.MEDIUM'),   desc: _t('priod.MEDIUM') },
+  { id: 'HIGH',     emoji: '🟠', label: _t('prio.HIGH'),     desc: _t('priod.HIGH') },
+  { id: 'CRITICAL', emoji: '🔴', label: _t('prio.CRITICAL'), desc: _t('priod.CRITICAL') },
 ];
 
 var CATEGORIES = [
-  { id: '',         label: _t('cat.all'),      desc: 'No category filter — receive everything' },
-  { id: 'ship',     label: _t('cat.ship'),     desc: 'Ship-related changes, stats, releases' },
-  { id: 'gameplay', label: _t('cat.gameplay'), desc: 'Game mechanics, systems, FPS, missions' },
-  { id: 'tech',     label: _t('cat.tech'),     desc: 'Engine, rendering, netcode, performance' },
-  { id: 'event',    label: _t('cat.event'),    desc: 'In-game events, IAE, Invictus, patches' },
-  { id: 'lore',     label: _t('cat.lore'),     desc: 'Galactapedia, Comm-Links, universe news' },
+  { id: '',         label: _t('cat.all'),      desc: _t('catd.all') },
+  { id: 'ship',     label: _t('cat.ship'),     desc: _t('catd.ship') },
+  { id: 'gameplay', label: _t('cat.gameplay'), desc: _t('catd.gameplay') },
+  { id: 'tech',     label: _t('cat.tech'),     desc: _t('catd.tech') },
+  { id: 'event',    label: _t('cat.event'),    desc: _t('catd.event') },
+  { id: 'lore',     label: _t('cat.lore'),     desc: _t('catd.lore') },
 ];
 
 // ── RENDER ──

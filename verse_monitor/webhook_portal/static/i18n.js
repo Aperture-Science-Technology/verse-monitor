@@ -9,7 +9,7 @@ var I18N = (function(){
     'nav.sources':     { fr: 'Sources', en: 'Sources' },
     'nav.pricing':     { fr: 'Tarifs', en: 'Pricing' },
     'nav.getStarted':  { fr: 'Commencer', en: 'Get Started' },
-    'nav.dashboard':   { fr: 'Dashboard', en: 'Dashboard' },
+    'nav.dashboard':   { fr: 'Tableau de bord', en: 'Dashboard' },
     
     // ── HERO ──
     'hero.badge':      { fr: 'Plateforme de veille Star Citizen', en: 'Star Citizen Intelligence Platform' },
@@ -269,6 +269,32 @@ var I18N = (function(){
     'cat.tech':      { fr: 'Technologie', en: 'Technology' },
     'cat.event':     { fr: 'Événements', en: 'Events' },
     'cat.lore':      { fr: 'Lore', en: 'Lore' },
+
+    // ── EVENT TYPE DESCRIPTIONS ──
+    'etd.roadmap_card_added':    { fr: 'Nouvelles cartes apparaissant sur la roadmap', en: 'New cards appearing on the roadmap' },
+    'etd.roadmap_card_released': { fr: 'Cartes passant dans un patch LIVE', en: 'Cards moving to a LIVE patch' },
+    'etd.roadmap_card_delayed':  { fr: 'Cartes repoussées à un patch ultérieur', en: 'Cards pushed to a later patch' },
+    'etd.roadmap_card_removed':  { fr: 'Cartes supprimées de la roadmap', en: 'Cards removed from the roadmap' },
+    'etd.roadmap_card_updated':  { fr: 'Détails de carte modifiés (titre, description, patch)', en: 'Card details changed (title, description, patch)' },
+    'etd.patch_notes_live':      { fr: 'Publication officielle des notes de patch LIVE', en: 'Official LIVE patch notes publication' },
+    'etd.comm_link_published':   { fr: 'Comm-Links RSI (rapports hebdomadaires, aperçus)', en: 'RSI Comm-Links (weekly reports, sneak peeks)' },
+    'etd.devtracker_post':       { fr: 'Posts individuels de développeurs sur le tracker', en: 'Individual developer posts on the progress tracker' },
+    'etd.twisc_published':       { fr: 'Newsletter hebdomadaire "This Week in Star Citizen"', en: 'Weekly newsletter "This Week in Star Citizen"' },
+    'etd.monthly_report':        { fr: 'Rapports de production mensuels', en: 'Monthly production reports' },
+
+    // ── PRIORITY DESCRIPTIONS ──
+    'priod.LOW':      { fr: 'Toutes les alertes sans importance', en: 'Every alert regardless of importance' },
+    'priod.MEDIUM':   { fr: 'Ignorer les mises à jour mineures', en: 'Skip minor updates, keep meaningful changes' },
+    'priod.HIGH':     { fr: 'Événements significatifs uniquement', en: 'Only significant events (releases, delays, patches)' },
+    'priod.CRITICAL': { fr: 'Alertes critiques uniquement', en: 'Only critical alerts (major releases, breaking changes)' },
+
+    // ── CATEGORY DESCRIPTIONS ──
+    'catd.all':       { fr: 'Aucun filtre — tout recevoir', en: 'No category filter — receive everything' },
+    'catd.ship':      { fr: 'Changements liés aux vaisseaux, stats, sorties', en: 'Ship-related changes, stats, releases' },
+    'catd.gameplay':  { fr: 'Mécaniques de jeu, systèmes, FPS, missions', en: 'Game mechanics, systems, FPS, missions' },
+    'catd.tech':      { fr: 'Moteur, rendu, réseau, performance', en: 'Engine, rendering, netcode, performance' },
+    'catd.event':     { fr: 'Événements en jeu, IAE, Invictus, patches', en: 'In-game events, IAE, Invictus, patches' },
+    'catd.lore':      { fr: 'Galactapedia, Comm-Links, actualités de l\'univers', en: 'Galactapedia, Comm-Links, universe news' },
   };
   
   function t(key, fallback){
