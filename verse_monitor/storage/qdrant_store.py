@@ -117,9 +117,9 @@ class QdrantStore:
             qdrant_filter = models.Filter(must=conditions)
 
         results = await asyncio.to_thread(
-            self._client.search,
+            self._client.query_points,
             collection_name=COLLECTION,
-            query_vector=vector,
+            query=vector,
             limit=limit,
             query_filter=qdrant_filter,
             with_payload=True,
@@ -127,7 +127,7 @@ class QdrantStore:
 
         return [
             {"score": hit.score, **hit.payload}
-            for hit in results
+            for hit in results.points
         ]
 
     async def delete_event(self, event_id: str) -> None:
