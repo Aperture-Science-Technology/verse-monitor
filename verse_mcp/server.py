@@ -30,6 +30,7 @@ from verse_mcp.tools.monitor import (
     sc_get_dev_posts as _sc_get_dev_posts,
     sc_get_event_context as _sc_get_event_context,
 )
+from verse_mcp.tools.sc_search_community import sc_search_community as _sc_search_community
 
 
 @asynccontextmanager
@@ -149,7 +150,7 @@ async def health(request: Request) -> JSONResponse:
             "last_ingestion": last_ingestion,
             "ingestion_stats": ingestion_stats,
             "events_stored": events_stored,
-            "uptime_sources": ["comm_links", "devtracker", "roadmap_release_view"],
+            "uptime_sources": ["comm_links", "devtracker", "roadmap_release_view", "reddit_starcitizen"],
         },
     })
 
@@ -208,6 +209,14 @@ async def sc_get_dev_posts(hours: int = 72, limit: int = 15) -> str:
 async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
     """Get historical events related to a subject (keyword search, not semantic)."""
     return await _sc_get_event_context(event_title, limit)
+
+
+# --- Community tools (Reddit) ---
+
+@mcp.tool()
+async def sc_search_community(query: str, top_k: int = 5) -> str:
+    """Search community discussions from r/starcitizen (Reddit posts and comments)."""
+    return await _sc_search_community(query, top_k=top_k)
 
 
 if __name__ == "__main__":

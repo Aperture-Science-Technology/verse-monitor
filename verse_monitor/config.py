@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     POLL_DEVTRACKER_INTERVAL: int = 120
     POLL_COMMLINKS_INTERVAL: int = 300
     POLL_SPECTRUM_INTERVAL: int = 180
+    POLL_REDDIT_INTERVAL: int = 180
 
     # Redis Stream
     STREAM_NAME: str = "sc:events"
