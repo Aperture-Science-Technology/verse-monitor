@@ -36,6 +36,8 @@ class EventType(str, Enum):
     TWISC_PUBLISHED = "twisc_published"
     MONTHLY_REPORT = "monthly_report"
     DEVTRACKER_POST = "devtracker_post"
+    REDDIT_POST_NEW = "reddit_post_new"
+    REDDIT_POST_TRENDING = "reddit_post_trending"
 
 
 class SCEvent(BaseModel):
