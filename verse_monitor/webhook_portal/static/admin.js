@@ -28,8 +28,26 @@ var AdminDashboard = (function () {
     }
     opts.headers = headers;
     return fetch(API + path, opts).then(function (r) {
-      return r.json().then(function (d) { return { status: r.status, data: d }; });
+      return r.json().then(function (d) {
+        if (r.status === 403 || r.status === 503) {
+          // Key invalid or not configured — clear stored key and re-prompt
+          _adminKey = '';
+          sessionStorage.removeItem('verse:admin_key');
+          if (!_isModalOpen()) {
+            _toast('Admin key invalid — re-enter key', 'error');
+            if (_showKeyModal()) {
+              // Retry the request with new key
+              return _apiFetch(path, opts);
+            }
+          }
+        }
+        return { status: r.status, data: d };
+      });
     });
+  }
+
+  function _isModalOpen() {
+    return !!document.getElementById('admin-key-modal');
   }
 
   function _toast(msg, type) {
@@ -125,7 +143,17 @@ var AdminDashboard = (function () {
   function init(container) {
     _container = container;
     _tab = 'overview';
-    _promptAdminKey();
+    if (!_promptAdminKey()) {
+      // User cancelled or entered empty key — show error, do not render
+      _container.innerHTML = '';
+      var err = document.createElement('div');
+      err.className = 'admin-error';
+      err.style.cssText = 'padding:48px;text-align:center;';
+      // Static error message — no user-controlled data (safe innerHTML)
+      err.innerHTML = '<p style="font-size:48px;margin-bottom:16px;">🔒</p><p>Admin access requires a valid API key.</p><p style="color:var(--text4);font-size:13px;margin-top:8px;">Set ADMIN_API_KEY in the server environment.</p>';
+      _container.appendChild(err);
+      return;
+    }
     _render();
   }
 
@@ -134,14 +162,85 @@ var AdminDashboard = (function () {
     var stored = sessionStorage.getItem('verse:admin_key');
     if (stored) {
       _adminKey = stored;
-      return;
+      return true;
     }
-    // Prompt the user for the admin key
-    var key = prompt('Enter admin API key:');
-    if (key && key.trim()) {
-      _adminKey = key.trim();
-      sessionStorage.setItem('verse:admin_key', _adminKey);
-    }
+    // Show inline modal for admin key (SaaS UX — no native prompt)
+    return _showKeyModal();
+  }
+
+  function _showKeyModal() {
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'admin-key-modal';
+    var modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.maxWidth = '420px';
+    var h3 = document.createElement('h3');
+    h3.textContent = '🔐 Admin Access';
+    var p = document.createElement('p');
+    p.textContent = 'Enter the admin API key to continue.';
+    p.style.color = 'var(--text4)';
+    p.style.marginBottom = '16px';
+    var input = document.createElement('input');
+    input.type = 'password';
+    input.className = 'form-control';
+    input.placeholder = 'Admin API key';
+    input.id = 'admin-key-input';
+    input.style.width = '100%';
+    input.style.marginBottom = '16px';
+    var actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary btn-sm';
+    cancelBtn.textContent = 'Cancel';
+    var submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary btn-sm';
+    submitBtn.textContent = 'Unlock';
+    actions.appendChild(cancelBtn);
+    actions.appendChild(submitBtn);
+    modal.appendChild(h3);
+    modal.appendChild(p);
+    modal.appendChild(input);
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Focus the input
+    input.focus();
+
+    // Return true if key entered, false otherwise
+    // We use a synchronous check: if the modal is dismissed without a key, return false
+    // Since we can't block, we set _adminKey and return based on current state
+    // The modal handlers will set _adminKey and re-init if valid
+
+    cancelBtn.addEventListener('click', function () {
+      overlay.remove();
+      // _adminKey is still empty — init will show error
+    });
+
+    submitBtn.addEventListener('click', function () {
+      var key = input.value.trim();
+      if (key) {
+        _adminKey = key;
+        sessionStorage.setItem('verse:admin_key', _adminKey);
+        overlay.remove();
+        // Re-init to render with the key
+        init(_container);
+      } else {
+        input.style.borderColor = 'var(--red)';
+        input.placeholder = 'Key is required';
+      }
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { submitBtn.click(); }
+      if (e.key === 'Escape') { cancelBtn.click(); }
+    });
+
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) cancelBtn.click(); });
+
+    // Return false — the modal is async, init will be re-called if key is valid
+    return !!_adminKey;
   }
 
   function _render() {
@@ -235,13 +334,13 @@ var AdminDashboard = (function () {
 
   function _renderOverview(content) {
     Promise.all([
-      fetch(API + '/stats').then(function (r) { return r.json(); }),
-      fetch(API + '/admin/system').then(function (r) { return r.json(); }),
-      fetch(API + '/admin/activity').then(function (r) { return r.json(); }),
+      _apiFetch('/stats'),
+      _apiFetch('/admin/system'),
+      _apiFetch('/admin/activity'),
     ]).then(function (res) {
-      var stats = res[0] || {};
-      var system = res[1] || {};
-      var activity = res[2] || {};
+      var stats = (res[0] && res[0].data) || {};
+      var system = (res[1] && res[1].data) || {};
+      var activity = (res[2] && res[2].data) || {};
       var subs = stats.subscriptions || {};
       var rag = stats.rag || {};
       var mem = system.memory || {};
@@ -309,7 +408,7 @@ var AdminDashboard = (function () {
   // ── SOURCES TAB ──
 
   function _renderSources(content) {
-    fetch(API + '/admin/sources/status').then(function (r) { return r.json(); }).then(function (data) {
+    _apiFetch('/admin/sources/status').then(function (data) {
       content.innerHTML = '';
 
       var title = document.createElement('h3');
@@ -365,7 +464,7 @@ var AdminDashboard = (function () {
         (function (s, btn) {
           btn.addEventListener('click', function () {
             btn.disabled = true;
-            fetch(API + '/admin/sources/' + s.id + '/crawl', { method: 'POST' })
+            _apiFetch('/admin/sources/' + s.id + '/crawl', { method: 'POST' })
               .then(function () {
                 _toast('Crawl triggered for ' + s.name);
                 btn.disabled = false;
@@ -383,8 +482,8 @@ var AdminDashboard = (function () {
         (function (s, btn) {
           btn.addEventListener('click', function () {
             btn.disabled = true;
-            fetch(API + '/admin/sources/' + s.id + '/pause', { method: 'POST' })
-              .then(function (r) { return r.json(); })
+            _apiFetch('/admin/sources/' + s.id + '/pause', { method: 'POST' })
+              
               .then(function (d) {
                 _toast(s.name + ' ' + d.status);
                 _renderSources(content);
@@ -417,11 +516,11 @@ var AdminDashboard = (function () {
 
   function _renderRag(content) {
     Promise.all([
-      fetch(API + '/stats').then(function (r) { return r.json(); }),
-      fetch(API + '/admin/system').then(function (r) { return r.json(); }),
+      _apiFetch('/stats'),
+      _apiFetch('/admin/system'),
     ]).then(function (res) {
-      var stats = res[0] || {};
-      var system = res[1] || {};
+      var stats = (res[0] && res[0].data) || {};
+      var system = (res[1] && res[1].data) || {};
       var rag = stats.rag || {};
       var cats = rag.categories || {};
       var ingestion = system.ingestion || {};
@@ -506,7 +605,7 @@ var AdminDashboard = (function () {
       reingestBtn.textContent = 'Re-ingest Now';
       reingestBtn.addEventListener('click', function () {
         reingestBtn.disabled = true;
-        fetch(API + '/admin/ingest', { method: 'POST' })
+        _apiFetch('/admin/ingest', { method: 'POST' })
           .then(function () { _toast('Ingestion triggered'); reingestBtn.disabled = false; })
           .catch(function () { _toast('Failed to trigger ingestion', 'error'); reingestBtn.disabled = false; });
       });
@@ -547,11 +646,11 @@ var AdminDashboard = (function () {
         if (!q) return;
         testBtn.disabled = true;
         testResults.innerHTML = '<div class="loading"><div class="spinner"></div><span>Searching…</span></div>';
-        fetch(API + '/admin/rag/search', {
+        _apiFetch('/admin/rag/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: q, limit: 5 }),
-        }).then(function (r) { return r.json(); }).then(function (d) {
+        }).then(function (d) {
           testBtn.disabled = false;
           testResults.innerHTML = '';
           if (d.error) {
@@ -603,7 +702,7 @@ var AdminDashboard = (function () {
   // ── WEBHOOKS TAB ──
 
   function _renderWebhooks(content) {
-    fetch(API + '/admin/subscriptions').then(function (r) { return r.json(); }).then(function (data) {
+    _apiFetch('/admin/subscriptions').then(function (data) {
       content.innerHTML = '';
 
       var titleRow = document.createElement('div');
@@ -683,8 +782,8 @@ var AdminDashboard = (function () {
         (function (s, btn) {
           btn.addEventListener('click', function () {
             btn.disabled = true;
-            fetch(API + '/subscriptions/' + s.api_key + '/test', { method: 'POST' })
-              .then(function (r) { return r.json(); })
+            _apiFetch('/subscriptions/' + s.api_key + '/test', { method: 'POST' })
+              
               .then(function (d) {
                 _toast(d.status === 'ok' ? 'Ping sent!' : ('Ping failed: ' + (d.message || '')), d.status === 'ok' ? 'success' : 'error');
                 btn.disabled = false;
@@ -700,7 +799,7 @@ var AdminDashboard = (function () {
         (function (s, btn) {
           btn.addEventListener('click', function () {
             btn.disabled = true;
-            fetch(API + '/subscriptions/' + s.api_key, {
+            _apiFetch('/subscriptions/' + s.api_key, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ active: !s.active }),
@@ -723,7 +822,7 @@ var AdminDashboard = (function () {
               'Delete "' + s.name + '"? This will permanently stop all alerts.',
               'Delete',
               function () {
-                fetch(API + '/subscriptions/' + s.api_key, { method: 'DELETE' })
+                _apiFetch('/subscriptions/' + s.api_key, { method: 'DELETE' })
                   .then(function () { _toast('Subscription deleted'); _renderWebhooks(content); })
                   .catch(function () { _toast('Failed to delete', 'error'); });
               }
@@ -756,7 +855,7 @@ var AdminDashboard = (function () {
   // ── SYSTEM TAB ──
 
   function _renderSystem(content) {
-    fetch(API + '/admin/system').then(function (r) { return r.json(); }).then(function (data) {
+    _apiFetch('/admin/system').then(function (data) {
       content.innerHTML = '';
 
       var title = document.createElement('h3');
@@ -832,8 +931,8 @@ var AdminDashboard = (function () {
       flushBtn.textContent = 'Flush Cache';
       flushBtn.addEventListener('click', function () {
         _modal('Flush Cache', 'Remove all verse:* cache keys (subscription data is safe). Continue?', 'Flush', function () {
-          fetch(API + '/admin/cache/flush', { method: 'POST' })
-            .then(function (r) { return r.json(); })
+          _apiFetch('/admin/cache/flush', { method: 'POST' })
+            
             .then(function (d) { _toast('Cache flushed — ' + d.keys_removed + ' keys removed'); })
             .catch(function () { _toast('Failed to flush cache', 'error'); });
         });
@@ -845,7 +944,7 @@ var AdminDashboard = (function () {
       reindexBtn.textContent = 'Trigger Full Re-index';
       reindexBtn.addEventListener('click', function () {
         _modal('Full Re-index', 'Trigger a complete wiki ingestion cycle. This may take several minutes.', 'Re-index', function () {
-          fetch(API + '/admin/ingest', { method: 'POST' })
+          _apiFetch('/admin/ingest', { method: 'POST' })
             .then(function () { _toast('Re-index triggered'); })
             .catch(function () { _toast('Failed to trigger re-index', 'error'); });
         });

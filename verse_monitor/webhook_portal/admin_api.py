@@ -30,10 +30,10 @@ ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "")
 
 
 def _verify_admin_key(x_admin_key: str | None = None) -> None:
-    """Verify the admin API key. Raises HTTPException if invalid."""
+    """Verify the admin API key. Raises HTTPException if invalid or not configured."""
     if not ADMIN_API_KEY:
-        logger.warning("ADMIN_API_KEY not set — admin endpoints are unprotected!")
-        return
+        logger.warning("ADMIN_API_KEY not set — admin endpoints are disabled")
+        raise HTTPException(status_code=503, detail="Admin API key not configured on server")
     if x_admin_key != ADMIN_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid admin key")
 
