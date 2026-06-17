@@ -3,7 +3,14 @@
 
 var API_BASE = '/api/v1';
 var state = { view: 'home', apiKey: null, sub: null };
-var _t = I18N.t;
+var _t = null; // Will be set after I18N is loaded
+
+function _t(key) {
+  if (typeof I18N !== 'undefined' && I18N && I18N.t) {
+    return I18N.t(key);
+  }
+  return key; // Fallback: return the key itself
+}
 
 // ── ROUTER ──
 var VIEW_HASH = { home: '#home', register: '#register', docs: '#docs', dashboard: '#dashboard', admin: '#admin' };
@@ -40,35 +47,41 @@ function showToast(msg, type){
   setTimeout(function(){ t.style.opacity='0'; t.style.transform='translateX(16px)'; setTimeout(function(){ t.remove(); }, 300); }, 4000);
 }
 
-// ── DATA ──
-var EVENT_TYPES = [
-  { id: 'roadmap_card_added',    label: _t('et.roadmap_card_added'),    desc: _t('etd.roadmap_card_added') },
-  { id: 'roadmap_card_released', label: _t('et.roadmap_card_released'), desc: _t('etd.roadmap_card_released') },
-  { id: 'roadmap_card_delayed',  label: _t('et.roadmap_card_delayed'),  desc: _t('etd.roadmap_card_delayed') },
-  { id: 'roadmap_card_removed',  label: _t('et.roadmap_card_removed'),  desc: _t('etd.roadmap_card_removed') },
-  { id: 'roadmap_card_updated',  label: _t('et.roadmap_card_updated'),  desc: _t('etd.roadmap_card_updated') },
-  { id: 'patch_notes_live',      label: _t('et.patch_notes_live'),      desc: _t('etd.patch_notes_live') },
-  { id: 'comm_link_published',   label: _t('et.comm_link_published'),   desc: _t('etd.comm_link_published') },
-  { id: 'devtracker_post',       label: _t('et.devtracker_post'),       desc: _t('etd.devtracker_post') },
-  { id: 'twisc_published',       label: _t('et.twisc_published'),       desc: _t('etd.twisc_published') },
-  { id: 'monthly_report',        label: _t('et.monthly_report'),        desc: _t('etd.monthly_report') },
-];
+// ── DATA (functions to defer I18N.t() calls until render time) ──
+function getEventTypes() {
+  return [
+    { id: 'roadmap_card_added',    label: I18N.t('et.roadmap_card_added'),    desc: I18N.t('etd.roadmap_card_added') },
+    { id: 'roadmap_card_released', label: I18N.t('et.roadmap_card_released'), desc: I18N.t('etd.roadmap_card_released') },
+    { id: 'roadmap_card_delayed',  label: I18N.t('et.roadmap_card_delayed'),  desc: I18N.t('etd.roadmap_card_delayed') },
+    { id: 'roadmap_card_removed',  label: I18N.t('et.roadmap_card_removed'),  desc: I18N.t('etd.roadmap_card_removed') },
+    { id: 'roadmap_card_updated',  label: I18N.t('et.roadmap_card_updated'),  desc: I18N.t('etd.roadmap_card_updated') },
+    { id: 'patch_notes_live',      label: I18N.t('et.patch_notes_live'),      desc: I18N.t('etd.patch_notes_live') },
+    { id: 'comm_link_published',   label: I18N.t('et.comm_link_published'),   desc: I18N.t('etd.comm_link_published') },
+    { id: 'devtracker_post',       label: I18N.t('et.devtracker_post'),       desc: I18N.t('etd.devtracker_post') },
+    { id: 'twisc_published',       label: I18N.t('et.twisc_published'),       desc: I18N.t('etd.twisc_published') },
+    { id: 'monthly_report',        label: I18N.t('et.monthly_report'),        desc: I18N.t('etd.monthly_report') },
+  ];
+}
 
-var PRIORITIES = [
-  { id: 'LOW',      emoji: '🔵', label: _t('prio.LOW'),      desc: _t('priod.LOW') },
-  { id: 'MEDIUM',   emoji: '🟡', label: _t('prio.MEDIUM'),   desc: _t('priod.MEDIUM') },
-  { id: 'HIGH',     emoji: '🟠', label: _t('prio.HIGH'),     desc: _t('priod.HIGH') },
-  { id: 'CRITICAL', emoji: '🔴', label: _t('prio.CRITICAL'), desc: _t('priod.CRITICAL') },
-];
+function getPriorities() {
+  return [
+    { id: 'LOW',      emoji: '🔵', label: I18N.t('prio.LOW'),      desc: I18N.t('priod.LOW') },
+    { id: 'MEDIUM',   emoji: '🟡', label: I18N.t('prio.MEDIUM'),   desc: I18N.t('priod.MEDIUM') },
+    { id: 'HIGH',     emoji: '🟠', label: I18N.t('prio.HIGH'),     desc: I18N.t('priod.HIGH') },
+    { id: 'CRITICAL', emoji: '🔴', label: I18N.t('prio.CRITICAL'), desc: I18N.t('priod.CRITICAL') },
+  ];
+}
 
-var CATEGORIES = [
-  { id: '',         label: _t('cat.all'),      desc: _t('catd.all') },
-  { id: 'ship',     label: _t('cat.ship'),     desc: _t('catd.ship') },
-  { id: 'gameplay', label: _t('cat.gameplay'), desc: _t('catd.gameplay') },
-  { id: 'tech',     label: _t('cat.tech'),     desc: _t('catd.tech') },
-  { id: 'event',    label: _t('cat.event'),    desc: _t('catd.event') },
-  { id: 'lore',     label: _t('cat.lore'),     desc: _t('catd.lore') },
-];
+function getCategories() {
+  return [
+    { id: '',         label: I18N.t('cat.all'),      desc: I18N.t('catd.all') },
+    { id: 'ship',     label: I18N.t('cat.ship'),     desc: I18N.t('catd.ship') },
+    { id: 'gameplay', label: I18N.t('cat.gameplay'), desc: I18N.t('catd.gameplay') },
+    { id: 'tech',     label: I18N.t('cat.tech'),     desc: I18N.t('catd.tech') },
+    { id: 'event',    label: I18N.t('cat.event'),    desc: I18N.t('catd.event') },
+    { id: 'lore',     label: I18N.t('cat.lore'),     desc: I18N.t('catd.lore') },
+  ];
+}
 
 // ── RENDER ──
 function render(){
@@ -189,7 +202,7 @@ function renderHome(app){
     '<h2 class="section-title">' + _t('events.title') + '</h2>' +
     '<p class="section-subtitle">' + _t('events.subtitle') + '</p>' +
     '<div class="event-chips">' +
-      '<span class="event-chip">' + EVENT_TYPES[0].label + '</span><span class="event-chip">' + EVENT_TYPES[5].label + '</span><span class="event-chip">' + EVENT_TYPES[6].label + '</span><span class="event-chip">' + EVENT_TYPES[7].label + '</span><span class="event-chip">' + EVENT_TYPES[8].label + '</span><span class="event-chip">' + EVENT_TYPES[9].label + '</span>' +
+      '<span class="event-chip">' + getEventTypes()[0].label + '</span><span class="event-chip">' + getEventTypes()[5].label + '</span><span class="event-chip">' + getEventTypes()[6].label + '</span><span class="event-chip">' + getEventTypes()[7].label + '</span><span class="event-chip">' + getEventTypes()[8].label + '</span><span class="event-chip">' + getEventTypes()[9].label + '</span>' +
     '</div>';
   app.appendChild(eventSection);
 
@@ -401,7 +414,7 @@ function renderRegister(app){
   g4.innerHTML = '<div class="section-label-form"><span class="section-num">4</span><label>' + _t('reg.step4') + '</label></div><div class="form-hint">' + _t('reg.step4Hint') + '</div>';
   var priSel = document.createElement('div'); priSel.className = 'priority-selector';
   var selectedPriority = 'MEDIUM';
-  PRIORITIES.forEach(function(p){
+  getPriorities().forEach(function(p){
     var po = document.createElement('div');
     po.className = 'priority-option' + (p.id === 'MEDIUM' ? ' selected' : '');
     po.dataset.id = p.id;
@@ -420,7 +433,7 @@ function renderRegister(app){
   g5.innerHTML = '<div class="section-label-form"><span class="section-num">5</span><label>' + _t('reg.step5') + '</label></div><div class="form-hint">' + _t('reg.step5Hint') + '</div>';
   var chipGrid = document.createElement('div'); chipGrid.className = 'chip-grid';
   var selectedTypes = [];
-  EVENT_TYPES.forEach(function(t){
+  getEventTypes().forEach(function(t){
     var chip = document.createElement('div');
     chip.className = 'chip'; chip.dataset.id = t.id;
     chip.innerHTML = '<span>' + t.label + '</span>';
@@ -461,7 +474,7 @@ function renderRegister(app){
   var g7 = document.createElement('div'); g7.className = 'form-group';
   g7.innerHTML = '<div class="section-label-form"><span class="section-num">7</span><label>' + _t('reg.step7') + ' <span style="color:var(--text4);font-weight:400">' + _t('reg.step7Opt') + '</span></label></div><div class="form-hint">' + _t('reg.step7Hint') + '</div>';
   var selCat = document.createElement('select'); selCat.className = 'form-control'; selCat.id = 'f-cat';
-  CATEGORIES.forEach(function(c){
+  getCategories().forEach(function(c){
     var opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.label + (c.desc ? ' — ' + c.desc : '');
     selCat.appendChild(opt);
   });

@@ -158,7 +158,7 @@ var I18N = (function(){
     
     // ── MODALS ──
     'modal.deleteTitle':  { fr: "Supprimer l'abonnement", en: 'Delete Subscription' },
-    'modal.deleteBody':   { fr: 'Êtes-vous sûr ? Cela arrêtera toutes les alertes et c\\'est irréversible.', en: 'Are you sure? This will permanently stop all alerts and cannot be undone.' },
+    'modal.deleteBody':   { fr: "Êtes-vous sûr ? Cela arrêtera toutes les alertes et c'est irréversible.", en: 'Are you sure? This will permanently stop all alerts and cannot be undone.' },
     'modal.cancel':       { fr: 'Annuler', en: 'Cancel' },
     'modal.confirm':      { fr: 'Supprimer', en: 'Delete' },
     'modal.apiKeyTitle':  { fr: '🔑 Accès au dashboard', en: '🔑 Access Dashboard' },
