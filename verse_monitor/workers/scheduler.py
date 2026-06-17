@@ -15,6 +15,7 @@ from verse_monitor.config import settings
 from verse_monitor.sources.roadmap import RoadmapSource
 from verse_monitor.sources.devtracker import DevtrackerSource
 from verse_monitor.sources.comm_links import CommLinksSource
+from verse_monitor.sources.reddit import RedditSource
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ def build_scheduler(r: redis.Redis) -> AsyncIOScheduler:
     roadmap = RoadmapSource()
     devtracker = DevtrackerSource()
     comm_links = CommLinksSource()
+    reddit = RedditSource()
 
     scheduler.add_job(
         roadmap.poll, "interval",
@@ -42,10 +44,16 @@ def build_scheduler(r: redis.Redis) -> AsyncIOScheduler:
         seconds=settings.POLL_COMMLINKS_INTERVAL,
         args=[r], max_instances=1, id="comm_links",
     )
+    scheduler.add_job(
+        reddit.poll, "interval",
+        seconds=settings.POLL_REDDIT_INTERVAL,
+        args=[r], max_instances=1, id="reddit",
+    )
 
     logger.info(
         f"Scheduler configuré — roadmap:{settings.POLL_ROADMAP_INTERVAL}s "
         f"devtracker:{settings.POLL_DEVTRACKER_INTERVAL}s "
-        f"commlinks:{settings.POLL_COMMLINKS_INTERVAL}s"
+        f"commlinks:{settings.POLL_COMMLINKS_INTERVAL}s "
+        f"reddit:{settings.POLL_REDDIT_INTERVAL}s"
     )
     return scheduler

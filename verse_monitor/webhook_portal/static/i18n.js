@@ -158,7 +158,7 @@ var I18N = (function(){
     
     // ── MODALS ──
     'modal.deleteTitle':  { fr: "Supprimer l'abonnement", en: 'Delete Subscription' },
-    'modal.deleteBody':   { fr: 'Êtes-vous sûr ? Cela arrêtera toutes les alertes et c\\'est irréversible.', en: 'Are you sure? This will permanently stop all alerts and cannot be undone.' },
+    'modal.deleteBody':   { fr: "Êtes-vous sûr ? Cela arrêtera toutes les alertes et c'est irréversible.", en: 'Are you sure? This will permanently stop all alerts and cannot be undone.' },
     'modal.cancel':       { fr: 'Annuler', en: 'Cancel' },
     'modal.confirm':      { fr: 'Supprimer', en: 'Delete' },
     'modal.apiKeyTitle':  { fr: '🔑 Accès au dashboard', en: '🔑 Access Dashboard' },
@@ -287,6 +287,50 @@ var I18N = (function(){
     'priod.MEDIUM':   { fr: 'Ignorer les alertes mineures, garder les changements significatifs', en: 'Skip minor alerts, keep meaningful changes' },
     'priod.HIGH':     { fr: 'Événements importants uniquement (sorties, retards, patches)', en: 'Only important events (releases, delays, patches)' },
     'priod.CRITICAL': { fr: 'Alertes critiques uniquement (sorties majeures, changements majeurs)', en: 'Critical alerts only (major releases, breaking changes)' },
+
+    // ── MODAL (missing key fix) ──
+    'modal.deleteBtn': { fr: 'Supprimer', en: 'Delete' },
+
+    // ── ADMIN ──
+    'admin.title':    { fr: 'Tableau de bord admin', en: 'Admin Dashboard' },
+    'admin.overview': { fr: 'Vue d\'ensemble', en: 'Overview' },
+    'admin.sources':  { fr: 'Sources', en: 'Sources' },
+    'admin.rag':      { fr: 'RAG', en: 'RAG' },
+    'admin.webhooks': { fr: 'Webhooks', en: 'Webhooks' },
+    'admin.system':   { fr: 'Système', en: 'System' },
+
+    // ── ADMIN SOURCES ──
+    'admin.sources.name':      { fr: 'Source', en: 'Source' },
+    'admin.sources.status':    { fr: 'Statut', en: 'Status' },
+    'admin.sources.lastFetch': { fr: 'Dernier fetch', en: 'Last Fetch' },
+    'admin.sources.nextFetch': { fr: 'Prochain fetch', en: 'Next Fetch' },
+    'admin.sources.errors':    { fr: 'Erreurs', en: 'Errors' },
+    'admin.sources.actions':   { fr: 'Actions', en: 'Actions' },
+    'admin.sources.crawl':     { fr: 'Re-crawler', en: 'Re-crawl' },
+    'admin.sources.pause':     { fr: 'Mettre en pause', en: 'Pause' },
+    'admin.sources.resume':    { fr: 'Reprendre', en: 'Resume' },
+
+    // ── ADMIN RAG ──
+    'admin.rag.totalChunks':   { fr: 'Total chunks', en: 'Total Chunks' },
+    'admin.rag.categories':    { fr: 'Catégories', en: 'Categories' },
+    'admin.rag.lastIngestion': { fr: 'Dernière ingestion', en: 'Last Ingestion' },
+    'admin.rag.reingest':      { fr: 'Ré-ingérer maintenant', en: 'Re-ingest Now' },
+
+    // ── ADMIN WEBHOOKS ──
+    'admin.webhooks.all':    { fr: 'Tous les abonnements', en: 'All Subscriptions' },
+    'admin.webhooks.test':   { fr: 'Tester', en: 'Test' },
+    'admin.webhooks.delete': { fr: 'Supprimer', en: 'Delete' },
+
+    // ── ADMIN SYSTEM ──
+    'admin.system.uptime':     { fr: 'Uptime', en: 'Uptime' },
+    'admin.system.memory':     { fr: 'Mémoire', en: 'Memory' },
+    'admin.system.disk':       { fr: 'Disque', en: 'Disk' },
+    'admin.system.load':       { fr: 'Charge', en: 'Load' },
+    'admin.system.redis':      { fr: 'Redis', en: 'Redis' },
+    'admin.system.qdrant':     { fr: 'Qdrant', en: 'Qdrant' },
+    'admin.system.scheduler':  { fr: 'Scheduler', en: 'Scheduler' },
+    'admin.system.flushCache': { fr: 'Vider le cache', en: 'Flush Cache' },
+    'admin.system.reindex':    { fr: 'Ré-indexer', en: 'Re-index' },
 
     // ── CATEGORY DESCRIPTIONS ──
     'catd.all':       { fr: 'Aucun filtre — tout recevoir', en: 'No category filter — receive everything' },
