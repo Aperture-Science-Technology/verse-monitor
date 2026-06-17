@@ -6,7 +6,7 @@ var state = { view: 'home', apiKey: null, sub: null };
 var _t = I18N.t;
 
 // ── ROUTER ──
-var VIEW_HASH = { home: '#home', register: '#register', docs: '#docs', dashboard: '#dashboard' };
+var VIEW_HASH = { home: '#home', register: '#register', docs: '#docs', dashboard: '#dashboard', admin: '#admin' };
 function navTo(view) {
   state.view = view || 'home';
   window.location.hash = VIEW_HASH[state.view] || '#home';
@@ -77,6 +77,7 @@ function render(){
   if (state.view === 'register') renderRegister(app);
   else if (state.view === 'dashboard') renderDashboard(app);
   else if (state.view === 'docs') renderDocsView(app);
+  else if (state.view === 'admin') renderAdminView(app);
   else renderHome(app);
   // Apply i18n to static HTML elements with data-i18n
   document.querySelectorAll('[data-i18n]').forEach(function(el){
@@ -312,6 +313,21 @@ function loadDocsStats(){
 function goDashboard(){
   var key = ($('#home-key-input')||{}).value || ($('#key-input')||{}).value;
   if(key && key.trim()){ state.apiKey = key.trim(); state.view = 'dashboard'; loadDashboard(key.trim()); }
+}
+
+// ── ADMIN ──
+function renderAdminView(app){
+  var container = document.createElement('div');
+  container.id = 'admin-container';
+  app.appendChild(container);
+  if (typeof AdminDashboard !== 'undefined') {
+    AdminDashboard.init(container);
+  } else {
+    var err = document.createElement('div');
+    err.className = 'alert alert-error';
+    err.innerHTML = '<span class="icon">⚠️</span><span>Admin dashboard failed to load.</span>';
+    container.appendChild(err);
+  }
 }
 
 // ── REGISTER ──
@@ -706,6 +722,8 @@ document.addEventListener('click', function(e){
   if (t.id === 'footer-docs'){ e.preventDefault(); e.stopPropagation(); navTo('docs'); }
   // Sources docs link (dynamically created)
   if (t.id === 'sources-docs-link'){ e.preventDefault(); e.stopPropagation(); navTo('docs'); }
+  // Admin nav button
+  if (t.id === 'admin-nav-btn'){ e.preventDefault(); e.stopPropagation(); navTo('admin'); }
 });
 
 })();
