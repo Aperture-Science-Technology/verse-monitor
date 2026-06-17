@@ -3,13 +3,13 @@
 
 var API_BASE = '/api/v1';
 var state = { view: 'home', apiKey: null, sub: null };
-var _t = null; // Will be set after I18N is loaded
 
+// I18N wrapper — safe to call before i18n.js loads (returns key as fallback)
 function _t(key) {
   if (typeof I18N !== 'undefined' && I18N && I18N.t) {
     return I18N.t(key);
   }
-  return key; // Fallback: return the key itself
+  return key;
 }
 
 // ── ROUTER ──
