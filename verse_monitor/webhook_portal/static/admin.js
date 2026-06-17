@@ -7,6 +7,9 @@ var AdminDashboard = (function () {
   var _refreshTimer = null;
   var API = '/api/v1';
 
+  // Admin API key — set during init from server-rendered meta tag or prompt
+  var _adminKey = '';
+
   var TABS = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'sources',  label: 'Sources',  icon: '📡' },
@@ -19,7 +22,11 @@ var AdminDashboard = (function () {
 
   function _apiFetch(path, opts) {
     opts = opts || {};
-    opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    if (_adminKey) {
+      headers['X-Admin-Key'] = _adminKey;
+    }
+    opts.headers = headers;
     return fetch(API + path, opts).then(function (r) {
       return r.json().then(function (d) { return { status: r.status, data: d }; });
     });
@@ -118,7 +125,23 @@ var AdminDashboard = (function () {
   function init(container) {
     _container = container;
     _tab = 'overview';
+    _promptAdminKey();
     _render();
+  }
+
+  function _promptAdminKey() {
+    // Check if we have a key stored in sessionStorage
+    var stored = sessionStorage.getItem('verse:admin_key');
+    if (stored) {
+      _adminKey = stored;
+      return;
+    }
+    // Prompt the user for the admin key
+    var key = prompt('Enter admin API key:');
+    if (key && key.trim()) {
+      _adminKey = key.trim();
+      sessionStorage.setItem('verse:admin_key', _adminKey);
+    }
   }
 
   function _render() {

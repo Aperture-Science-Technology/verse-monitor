@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import time
 from typing import Any
 
 import redis.asyncio as redis
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 
 from verse_monitor.config import settings
@@ -24,6 +25,22 @@ _PROTECTED_PREFIXES = (
     "verse:sub:",
     "verse:subscriptions:",
 )
+
+ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "")
+
+
+def _verify_admin_key(x_admin_key: str | None = None) -> None:
+    """Verify the admin API key. Raises HTTPException if invalid."""
+    if not ADMIN_API_KEY:
+        logger.warning("ADMIN_API_KEY not set — admin endpoints are unprotected!")
+        return
+    if x_admin_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+
+
+async def _verify_admin_key_dependency(x_admin_key: str | None = Header(None, alias="X-Admin-Key")) -> None:
+    """FastAPI dependency that extracts the admin key from the X-Admin-Key header."""
+    _verify_admin_key(x_admin_key)
 
 
 class RagSearchRequest(BaseModel):
@@ -44,7 +61,7 @@ def _get_store(r: redis.Redis) -> SubscriptionStore:
 
 
 def create_admin_router() -> APIRouter:
-    router = APIRouter()
+    router = APIRouter(dependencies=[Depends(_verify_admin_key_dependency)])
 
     @router.get("/sources/status")
     async def sources_status() -> dict[str, Any]:
