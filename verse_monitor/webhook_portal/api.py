@@ -388,6 +388,10 @@ def create_app() -> FastAPI:
             "alerts_stored": qdrant_events,
         }
 
+    # ===== Admin routes =====
+    from verse_monitor.webhook_portal.admin_api import create_admin_router
+    app.include_router(create_admin_router(), prefix="/api/v1/admin")
+
     return app
 
 
