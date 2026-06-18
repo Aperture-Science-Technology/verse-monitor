@@ -20,4 +20,4 @@ ENV PORT=8000
 
 # Hot-reload: mount source code as volume in docker-compose.dev.yml
 # Use uvicorn --reload for auto-restart on file changes
-CMD ["uvicorn", "verse_mcp.server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["python3", "-m", "verse_mcp.server"]
