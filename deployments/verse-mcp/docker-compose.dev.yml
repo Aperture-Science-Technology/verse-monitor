@@ -12,16 +12,19 @@ services:
       context: /home/glados/projects/verse-mcp
       dockerfile: Dockerfile.mcp.dev
     container_name: verse-mcp-dev
+    env_file: /home/glados/deployments/verse-mcp/.env.dev
     # PAS de restart — géré par dev-env-manager (TTL 2h)
     networks:
       - verse-monitor-dev-network
     environment:
-      REDIS_URL: redis://:${REDIS_PASSWORD_DEV}@redis-verse-dev:6379
+      REDIS_URL: redis://:dev@redis-verse-dev:6379
       QDRANT_URL: http://qdrant-dev:6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY_DEV}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      QDRANT_API_KEY: dev-key-ZYIImAYoVb3bH_nZRW_73Q
+      OPENROUTER_API_KEY: sk-placeholder-dev-key-not-for-production
       TRANSPORT: http
       PORT: "8000"
+      MOCK_DATA: "true"
+      DEV_MODE: "true"
     depends_on:
       redis-verse-dev:
         condition: service_healthy
@@ -57,8 +60,10 @@ services:
       qdrant-dev:
         condition: service_started
     environment:
-      - REDIS_URL=redis://:${REDIS_PASSWORD_DEV}@redis-verse-dev:6379
+      - REDIS_URL=redis://:dev@redis-verse-dev:6379
       - QDRANT_URL=http://qdrant-dev:6333
+      - MOCK_DATA=true
+      - DEV_MODE=true
     volumes:
       # Hot-reload: monter le code source
       - /home/glados/projects/verse-mcp/verse_monitor:/app/verse_monitor:rw
@@ -69,10 +74,14 @@ services:
       context: /home/glados/projects/verse-mcp
       dockerfile: Dockerfile.portal.dev
     container_name: verse-monitor-portal-dev
+    env_file: /home/glados/deployments/verse-mcp/.env.dev
     networks:
       - verse-monitor-dev-network
     environment:
-      REDIS_URL: redis://:${REDIS_PASSWORD_DEV}@redis-verse-dev:6379
+      REDIS_URL: redis://:dev@redis-verse-dev:6379
+      QDRANT_API_KEY: dev-key-ZYIImAYoVb3bH_nZRW_73Q
+      MOCK_DATA: "true"
+      DEV_MODE: "true"
     depends_on:
       redis-verse-dev:
         condition: service_healthy
@@ -89,13 +98,12 @@ services:
   redis-verse-dev:
     image: redis:7-alpine
     container_name: redis-verse-dev
-    command: redis-server --requirepass ${REDIS_PASSWORD_DEV} --appendonly yes
+    # Dev uniquement : pas de persistance, mot de passe simple
+    command: redis-server --requirepass dev
     networks:
       - verse-monitor-dev-network
-    volumes:
-      - redis-data-dev:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD_DEV}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "dev", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -114,7 +122,5 @@ networks:
     driver: bridge
 
 volumes:
-  redis-data-dev:
-    name: verse-monitor-dev_redis-data
   qdrant-storage-dev:
     name: verse-monitor-dev_qdrant-storage
