@@ -1,0 +1,120 @@
+# ============================================================
+# verse-mcp/docker-compose.dev.yml
+# ============================================================
+# Environnement de dev — hot-reload, containers suffixés -dev
+# Domaine: dev-verse.aperture-agency.org
+# TTL: extinction automatique après 2h sans push sur develop
+# ============================================================
+
+services:
+  verse-mcp-dev:
+    build:
+      context: /home/glados/projects/verse-mcp
+      dockerfile: Dockerfile.mcp.dev
+    container_name: verse-mcp-dev
+    # PAS de restart — géré par dev-env-manager (TTL 2h)
+    networks:
+      - verse-monitor-dev-network
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD_DEV}@redis-verse-dev:6379
+      QDRANT_URL: http://qdrant-dev:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY_DEV}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      TRANSPORT: http
+      PORT: "8000"
+    depends_on:
+      redis-verse-dev:
+        condition: service_healthy
+      qdrant-dev:
+        condition: service_started
+    volumes:
+      # Hot-reload: monter le code source en lecture/écriture
+      - /home/glados/projects/verse-mcp/verse_mcp:/app/verse_mcp:rw
+      - /home/glados/projects/verse-mcp/ingestion:/app/ingestion:rw
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8000)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.verse-mcp-dev.rule=Host(`dev-verse.aperture-agency.org`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.verse-mcp-dev.tls.certresolver=cf"
+      - "traefik.http.services.verse-mcp-dev.loadbalancer.server.port=8000"
+      - "traefik.http.services.verse-mcp-dev.loadbalancer.passhostheader=true"
+
+  verse-monitor-dev:
+    build:
+      context: /home/glados/projects/verse-mcp
+      dockerfile: Dockerfile.monitor.dev
+    container_name: verse-monitor-dev
+    env_file: /home/glados/deployments/verse-mcp/.env.dev
+    networks:
+      - verse-monitor-dev-network
+    depends_on:
+      redis-verse-dev:
+        condition: service_healthy
+      qdrant-dev:
+        condition: service_started
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD_DEV}@redis-verse-dev:6379
+      - QDRANT_URL=http://qdrant-dev:6333
+    volumes:
+      # Hot-reload: monter le code source
+      - /home/glados/projects/verse-mcp/verse_monitor:/app/verse_monitor:rw
+      - /home/glados/projects/verse-mcp/verse_mcp:/app/verse_mcp:rw
+
+  verse-monitor-portal-dev:
+    build:
+      context: /home/glados/projects/verse-mcp
+      dockerfile: Dockerfile.portal.dev
+    container_name: verse-monitor-portal-dev
+    networks:
+      - verse-monitor-dev-network
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD_DEV}@redis-verse-dev:6379
+    depends_on:
+      redis-verse-dev:
+        condition: service_healthy
+    volumes:
+      # Hot-reload: monter le code source
+      - /home/glados/projects/verse-mcp/verse_monitor:/app/verse_monitor:rw
+      - /home/glados/projects/verse-mcp/verse_mcp:/app/verse_mcp:rw
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.verse-monitor-portal-dev.rule=Host(`dev-verse.aperture-agency.org`)"
+      - "traefik.http.routers.verse-monitor-portal-dev.tls.certresolver=cf"
+      - "traefik.http.services.verse-monitor-portal-dev.loadbalancer.server.port=8080"
+
+  redis-verse-dev:
+    image: redis:7-alpine
+    container_name: redis-verse-dev
+    command: redis-server --requirepass ${REDIS_PASSWORD_DEV} --appendonly yes
+    networks:
+      - verse-monitor-dev-network
+    volumes:
+      - redis-data-dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD_DEV}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant-dev:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-dev
+    networks:
+      - verse-monitor-dev-network
+    volumes:
+      - qdrant-storage-dev:/qdrant/storage
+
+networks:
+  verse-monitor-dev-network:
+    name: verse-monitor-dev-network
+    driver: bridge
+
+volumes:
+  redis-data-dev:
+    name: verse-monitor-dev_redis-data
+  qdrant-storage-dev:
+    name: verse-monitor-dev_qdrant-storage
