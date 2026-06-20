@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
     command: >
       redis-server
-      --requirepass ${REDIS_PASSWORD}
+      --requirepass "verse-monitor-2026"
       --appendonly yes
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru

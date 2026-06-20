@@ -136,6 +136,7 @@ class QdrantStore:
             "url": event.url,
             "keywords": event.keywords,
             "timestamp": event.timestamp.isoformat(),
+            "timestamp_ts": event.timestamp.timestamp(),
             "content_hash": event.content_hash,
             "patch_version": event.patch_version,
             "author": event.author,
@@ -161,19 +162,29 @@ class QdrantStore:
         query: str,
         limit: int = 10,
         filters: dict[str, Any] | None = None,
+        priority_values: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         vector = await generate_embedding(query)
 
-        qdrant_filter: models.Filter | None = None
+        conditions: list = []
         if filters:
-            conditions = [
+            for key, value in filters.items():
+                if value is not None:
+                    conditions.append(
+                        models.FieldCondition(
+                            key=key,
+                            match=models.MatchValue(value=value),
+                        )
+                    )
+        if priority_values is not None:
+            conditions.append(
                 models.FieldCondition(
-                    key=key,
-                    match=models.MatchValue(value=value),
+                    key="priority",
+                    match=models.MatchAny(any=priority_values),
                 )
-                for key, value in filters.items()
-            ]
-            qdrant_filter = models.Filter(must=conditions)
+            )
+
+        qdrant_filter = models.Filter(must=conditions) if conditions else None
 
         results = await asyncio.to_thread(
             self._client.query_points,
@@ -226,18 +237,24 @@ async def get_events(
     category: str | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
-    """Module-level wrapper — uses QdrantStore.search with filters."""
-    filters: dict[str, Any] = {}
-    if event_type is not None:
-        filters["type"] = event_type
+    """Module-level wrapper — uses QdrantStore.search with filters.
+
+    priority_min: inclusive minimum priority (LOW < MEDIUM < HIGH < CRITICAL).
+    """
+    # Build priority list: include all priorities >= priority_min
+    _priority_order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    priority_values: list[str] | None = None
     if priority_min is not None:
-        filters["priority"] = (
-            priority_min.value if isinstance(priority_min, Priority) else priority_min
-        )
-    if category is not None:
-        filters["category"] = category
+        min_val = priority_min.value if isinstance(priority_min, Priority) else str(priority_min)
+        idx = _priority_order.index(min_val) if min_val in _priority_order else 0
+        priority_values = _priority_order[idx:]
+
     return await _default_store.search(
         query="event",
         limit=limit,
-        filters=filters if filters else None,
+        filters={
+            "type": event_type,
+            "category": category,
+        },
+        priority_values=priority_values,
     )
