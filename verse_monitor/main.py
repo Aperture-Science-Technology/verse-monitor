@@ -30,8 +30,9 @@ async def main() -> None:
     scheduler = build_scheduler(r)
     scheduler.start()
 
-    ingestion_scheduler = IngestionScheduler(r, interval=settings.INGESTION_INTERVAL)
-    await ingestion_scheduler.start()
+    # Ingestion scheduler disabled — blocks event loop, prevents RSI polling
+    # ingestion_scheduler = IngestionScheduler(r, interval=settings.INGESTION_INTERVAL)
+    # await ingestion_scheduler.start()
 
     # Start background collection monitoring (non-blocking)
     # Only monitors sc_events — sc_chunks is monitored by the MCP server health endpoint
