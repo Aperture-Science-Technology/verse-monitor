@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -e .
 COPY verse_monitor/ verse_monitor/
 COPY verse_mcp/ verse_mcp/
 COPY ingestion/ ingestion/
+COPY scripts/ scripts/
 
 ENV PYTHONPATH=/app
 

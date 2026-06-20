@@ -56,28 +56,23 @@ health: ## Check all health endpoints
 
 # --- Ingestion ---
 
-ingest: ## Run big batch ingestion (MAX_PAGES=200)
-	cd /home/glados/projects/verse-monitor && \
-	REDIS_URL="redis://:$$(grep REDIS_PASSWORD /home/glados/deployments/verse-monitor/.env | cut -d= -f2-)@redis-verse:6379" \
-	QDRANT_URL="http://qdrant:6333" \
-	OPENROUTER_API_KEY="$$(grep OPENROUTER_API_KEY /home/glados/deployments/verse-monitor/.env | cut -d= -f2-)" \
-	MAX_PAGES=200 \
-	docker run --rm --network verse-monitor-network \
-		-v /home/glados/projects/verse-monitor:/app:ro \
-		-w /app -e REDIS_URL -e QDRANT_URL -e OPENROUTER_API_KEY -e MAX_PAGES \
-		python:3.12-slim \
-		bash -c 'pip install -e . -q 2>&1 | tail -3 && python3 scripts/ingest_big_batch.py'
+ingest: ## Run big batch ingestion (MAX_PAGES=200, sc_chunks)
+	docker exec verse-monitor-mcp python3 -m scripts.ingest_big_batch
 
-ingest-direct: ## Run direct event ingestion (devtracker/roadmap/comm-links)
-	cd /home/glados/projects/verse-monitor && \
-	REDIS_URL="redis://:$$(grep REDIS_PASSWORD /home/glados/deployments/verse-monitor/.env | cut -d= -f2-)@redis-verse:6379" \
-	QDRANT_URL="http://qdrant:6333" \
-	OPENROUTER_API_KEY="$$(grep OPENROUTER_API_KEY /home/glados/deployments/verse-monitor/.env | cut -d= -f2-)" \
-	docker run --rm --network verse-monitor-network \
-		-v /home/glados/projects/verse-monitor:/app:ro \
-		-w /app -e REDIS_URL -e QDRANT_URL -e OPENROUTER_API_KEY \
-		python:3.12-slim \
-		bash -c 'pip install -e . -q 2>&1 | tail -3 && python3 scripts/ingest_events_direct.py'
+ingest-direct: ## Run direct event ingestion (devtracker/roadmap/comm-links → sc_events)
+	docker exec verse-monitor-mcp python3 -m scripts.ingest_events_direct
+
+ingest-check: ## Check ingestion stats
+	@echo "=== Qdrant collections ==="
+	@docker exec verse-monitor-mcp python3 -c "
+from qdrant_client import QdrantClient
+c = QdrantClient(url='http://qdrant:6333')
+for col in c.get_collections().collections:
+    info = c.get_collection(col.name)
+    print(f'  {col.name}: {info.points_count} points')
+"
+	@echo "=== Redis stream ==="
+	@docker exec redis-verse redis-cli -a $$(docker exec redis-verse redis-cli CONFIG GET requirepass | tail -1) XLEN sc:events 2>/dev/null || echo "  N/A"
 
 # --- Shell Access ---
 
