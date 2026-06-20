@@ -357,7 +357,7 @@ def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) 
 # ---------------------------------------------------------------------------
 
 async def generate_embedding(text: str) -> list[float]:
-    """Generate embedding via OpenRouter, with Redis cache."""
+    """Generate embedding via OpenRouter, with Redis cache + retry."""
     global redis_client
 
     # Check cache
@@ -368,30 +368,47 @@ async def generate_embedding(text: str) -> list[float]:
             return json.loads(cached)
 
     assert embedding_client is not None
-    resp = await embedding_client.post(
-        f"{settings.EMBEDDING_BASE_URL}/embeddings",
-        headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
-        json={
-            "input": text,
-            "model": EMBEDDING_MODEL,
-            "dimensions": EMBEDDING_DIMENSIONS,
-        },
-        timeout=30,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    embedding = data["data"][0]["embedding"]
-    stats["embeddings_generated"] += 1
 
-    # Cache it
-    if redis_client:
-        await redis_client.set(
-            f"emb:{text[:200]}",
-            json.dumps(embedding),
-            ex=REDIS_TTL_SECONDS,
-        )
+    # Retry with exponential backoff for 429/401 rate limits
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            resp = await embedding_client.post(
+                f"{settings.EMBEDDING_BASE_URL}/embeddings",
+                headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
+                json={
+                    "input": text,
+                    "model": EMBEDDING_MODEL,
+                    "dimensions": EMBEDDING_DIMENSIONS,
+                },
+                timeout=60,
+            )
+            if resp.status_code in (401, 429):
+                wait = 2 ** attempt
+                print(f"  [RATE_LIMIT] attempt {attempt+1}/{max_retries}, waiting {wait}s")
+                await asyncio.sleep(wait)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            embedding = data["data"][0]["embedding"]
+            stats["embeddings_generated"] += 1
 
-    return embedding
+            # Cache it
+            if redis_client:
+                await redis_client.set(
+                    f"emb:{text[:200]}",
+                    json.dumps(embedding),
+                    ex=REDIS_TTL_SECONDS,
+                )
+            return embedding
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt
+                await asyncio.sleep(wait)
+                continue
+            raise
+
+    raise RuntimeError(f"Failed to generate embedding after {max_retries} retries")
 
 
 # ---------------------------------------------------------------------------
