@@ -32,11 +32,23 @@ class IngestionScheduler:
     async def _run_once(self) -> None:
         from ingestion.wiki_ingest import run_ingestion_cycle
 
+        # Check if any collection was recreated — if so, force re-index
+        recreated = False
+        try:
+            flag = await self._redis.get("collection:recreated:sc_chunks")
+            if flag:
+                recreated = True
+                await self._redis.delete("collection:recreated:sc_chunks")
+                logger.info("Detected collection:recreated flag — forcing full re-index")
+        except Exception:
+            pass
+
         started_at = time.time()
-        logger.info("Ingestion cycle starting")
+        logger.info("Ingestion cycle starting%s", " (forced re-index)" if recreated else "")
         try:
             result = await run_ingestion_cycle()
             result["started_at"] = started_at
+            result["forced_reindex"] = recreated
             await self._redis.set("ingestion:last_run", json.dumps(result))
             logger.info(
                 "Ingestion cycle complete — %d items, %d chunks, %d errors, %.1fs",
