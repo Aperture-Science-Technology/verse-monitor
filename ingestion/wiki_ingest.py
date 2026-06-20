@@ -20,7 +20,6 @@ Usage:
 import asyncio
 import hashlib
 import json
-import os
 import sys
 import time
 import warnings
@@ -54,7 +53,7 @@ from ingestion.chunking import semantic_chunk_text
 # Pagination / operational tuning
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
 API_TIMEOUT = 300.0   # seconds (galactapedia can be very slow)
-MAX_PAGES = int(os.getenv("MAX_PAGES", "50"))  # max pages per source (override via env)
+MAX_PAGES = settings.MAX_PAGES
 
 # Rate limiting
 RATE_LIMIT_DELAY = 0.2  # seconds between API calls

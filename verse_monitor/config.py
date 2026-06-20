@@ -52,5 +52,8 @@ class Settings(BaseSettings):
     HTTP_RETRIES: int = 2
     HTTP_RETRY_BACKOFF: int = 5
 
+    # Ingestion tuning
+    MAX_PAGES: int = 50
+
 
 settings = Settings()

@@ -2,11 +2,11 @@
 
 import asyncio
 import logging
-import os
 from dataclasses import dataclass
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from verse_mcp.constants import VECTOR_COLLECTION_NAME, QDRANT_TIMEOUT, EMBEDDING_DIMENSIONS
+from verse_monitor.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +70,9 @@ async def _ensure_collection_with_dimension() -> None:
 
 async def init_qdrant() -> None:
     global _qdrant_client
-    qdrant_url = os.getenv("QDRANT_URL")
-    if not qdrant_url:
-        raise RuntimeError("QDRANT_URL not set")
     _qdrant_client = QdrantClient(
-        url=qdrant_url,
-        api_key=os.getenv("QDRANT_API_KEY"),
+        url=settings.QDRANT_URL,
+        api_key=settings.QDRANT_API_KEY or None,
         timeout=QDRANT_TIMEOUT,
     )
     # Ensure collection exists with correct dimension

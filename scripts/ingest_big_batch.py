@@ -10,16 +10,13 @@ import asyncio, os, sys, time
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Override MAX_PAGES before importing (wiki_ingest reads it at import time)
-os.environ["MAX_PAGES"] = os.getenv("MAX_PAGES", "200")
-
 from ingestion import wiki_ingest
 from verse_monitor.config import settings
 
 async def main():
     print("=" * 60)
     print("BIG BATCH INGESTION — sc_chunks")
-    print(f"MAX_PAGES = {wiki_ingest.MAX_PAGES}")
+    print(f"MAX_PAGES = {settings.MAX_PAGES}")
     print(f"REDIS_URL = {settings.REDIS_URL}")
     print(f"QDRANT_URL = {settings.QDRANT_URL}")
     print(f"WIKI_API_BASE = {settings.WIKI_API_BASE}")
