@@ -56,7 +56,7 @@ QDRANT_API_KEY = _env("QDRANT_API_KEY", "")
 # Pagination
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
 API_TIMEOUT = 300.0   # seconds (galactapedia can be very slow)
-MAX_PAGES = 50         # max pages per source (to avoid extremely long runs)
+MAX_PAGES = int(_env("MAX_PAGES", "50"))  # max pages per source (env override for big batches)
 
 # Rate limiting
 RATE_LIMIT_DELAY = 0.2  # seconds between API calls
