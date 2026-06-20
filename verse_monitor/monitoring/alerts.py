@@ -110,17 +110,54 @@ async def monitor_collections_loop(
 
     while True:
         try:
-            result = await check_all_collections(
-                events_client,
-                chunks_client,
-                events_collection,
-                chunks_collection,
-                expected_dimension,
+            # Only check events collection (sc_events) — chunks_client may be None
+            # if the worker doesn't have access to the MCP retriever client.
+            from verse_monitor.health.collection_check import check_collection
+
+            events_health = await check_collection(
+                events_client, events_collection, expected_dimension
             )
 
-            collections = result.get("collections", {})
-            for coll_name, health in collections.items():
-                status = health.get("status", "unknown")
+            collections_result = {
+                events_collection: {
+                    "name": events_health.name,
+                    "exists": events_health.exists,
+                    "dimension": events_health.dimension,
+                    "expected_dimension": events_health.expected_dimension,
+                    "point_count": events_health.point_count,
+                    "status": events_health.status,
+                    "error": events_health.error,
+                }
+            }
+
+            # Only check chunks if client is provided
+            if chunks_client is not None:
+                chunks_health = await check_collection(
+                    chunks_client, chunks_collection, expected_dimension
+                )
+                collections_result[chunks_collection] = {
+                    "name": chunks_health.name,
+                    "exists": chunks_health.exists,
+                    "dimension": chunks_health.dimension,
+                    "expected_dimension": chunks_health.expected_dimension,
+                    "point_count": chunks_health.point_count,
+                    "status": chunks_health.status,
+                    "error": chunks_health.error,
+                }
+
+            result = {
+                "status": "healthy",
+                "collections": collections_result,
+            }
+
+            # Determine overall status
+            for health_dict in collections_result.values():
+                if health_dict["status"] not in ("healthy", "empty"):
+                    result["status"] = "degraded"
+                    break
+
+            for coll_name, health_dict in collections_result.items():
+                status = health_dict.get("status", "unknown")
 
                 if status == "healthy":
                     continue
@@ -138,11 +175,11 @@ async def monitor_collections_loop(
                     "Collection '%s' unhealthy: %s — %s",
                     coll_name,
                     status,
-                    health.get("error", ""),
+                    health_dict.get("error", ""),
                 )
 
                 if discord_webhook:
-                    msg = format_alert(result, coll_name, health)
+                    msg = format_alert(result, coll_name, health_dict)
                     sent = await send_discord_alert(discord_webhook, msg)
                     if sent:
                         state.record_alert(alert_key)
