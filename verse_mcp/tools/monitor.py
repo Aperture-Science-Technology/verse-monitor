@@ -170,10 +170,11 @@ async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
             scroll_filter=models.Filter(should=should_filters) if should_filters else None,  # type: ignore[arg-type]
             limit=limit,
             with_payload=True,
-            order_by=models.OrderBy(key="timestamp_ts", direction="desc"),  # type: ignore[arg-type]
         )
 
         events = [p.payload for p in result[0] if p.payload]
+        # Sort by timestamp desc in memory (no payload index needed)
+        events.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
 
         return json.dumps(
             {"events": events, "count": len(events), "query": event_title},
