@@ -6,7 +6,12 @@ bypassing the Redis Stream pipeline.
 
 import asyncio
 import logging
+import os
+import sys
 from uuid import uuid4
+
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from verse_monitor.config import settings
 from verse_monitor.models import EventType, Priority, SCEvent
@@ -81,6 +86,13 @@ async def ingest_source(store: QdrantStore, source, event_type_default: EventTyp
 
 
 async def main():
+    logger.info(
+        "Config: QDRANT_URL=%s collection=%s REDIS_URL=%s",
+        settings.QDRANT_URL,
+        settings.QDRANT_COLLECTION,
+        settings.REDIS_URL,
+    )
+
     store = QdrantStore()
     await store.ensure_collection()
 

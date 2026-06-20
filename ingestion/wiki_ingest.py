@@ -37,26 +37,24 @@ from verse_mcp.constants import (
     REDIS_TTL_SECONDS,
     QDRANT_TIMEOUT,
 )
+from verse_monitor.config import settings
 from ingestion.chunking import semantic_chunk_text
 
 # ---------------------------------------------------------------------------
-# Configuration (read from env vars at runtime)
+# Configuration
+#
+# Connection/credential settings (WIKI_API_BASE, EMBEDDING_BASE_URL,
+# OPENROUTER_API_KEY, REDIS_URL, QDRANT_URL, QDRANT_API_KEY) come from the
+# single source of truth: verse_monitor.config.settings.
+#
+# Only operational tuning specific to ingestion lives here as module-level
+# constants.
 # ---------------------------------------------------------------------------
 
-def _env(key: str, default: str) -> str:
-    return os.getenv(key, default)
-
-API_BASE = _env("WIKI_API_BASE", "https://api.star-citizen.wiki/api")
-EMBEDDING_BASE_URL = _env("EMBEDDING_BASE_URL", "https://openrouter.ai/api/v1")
-OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY", "")
-REDIS_URL = _env("REDIS_URL", "redis://localhost:6379")
-QDRANT_URL = _env("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = _env("QDRANT_API_KEY", "")
-
-# Pagination
+# Pagination / operational tuning
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
 API_TIMEOUT = 300.0   # seconds (galactapedia can be very slow)
-MAX_PAGES = 50         # max pages per source (to avoid extremely long runs)
+MAX_PAGES = int(os.getenv("MAX_PAGES", "50"))  # max pages per source (override via env)
 
 # Rate limiting
 RATE_LIMIT_DELAY = 0.2  # seconds between API calls
@@ -132,7 +130,7 @@ stats = {
 async def api_get(path: str, params: dict | None = None) -> dict:
     """Make a GET request to the Star Citizen Wiki API v2."""
     assert api_client is not None
-    url = f"{API_BASE}{path}"
+    url = f"{settings.WIKI_API_BASE}{path}"
     headers = {"Accept": "application/json"}
     resp = await api_client.get(url, params=params or {}, headers=headers, timeout=API_TIMEOUT)
     resp.raise_for_status()
@@ -372,8 +370,8 @@ async def generate_embedding(text: str) -> list[float]:
 
     assert embedding_client is not None
     resp = await embedding_client.post(
-        f"{EMBEDDING_BASE_URL}/embeddings",
-        headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
+        f"{settings.EMBEDDING_BASE_URL}/embeddings",
+        headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
         json={
             "input": text,
             "model": EMBEDDING_MODEL,
@@ -411,7 +409,7 @@ def init_qdrant():
     warnings.filterwarnings("ignore", message="Api key is used with an insecure connection")
 
     qdrant_client = QdrantClient(
-        url=QDRANT_URL,
+        url=settings.QDRANT_URL,
         timeout=QDRANT_TIMEOUT,
     )
 
@@ -603,7 +601,7 @@ async def run_ingestion_cycle(categories: list[str] | None = None) -> dict:
     embedding_client = httpx.AsyncClient()
 
     try:
-        r = redis_lib.from_url(REDIS_URL, decode_responses=True)
+        r = redis_lib.from_url(settings.REDIS_URL, decode_responses=True)
         await r.ping()
         redis_client = r
         print("Redis: OK")
@@ -612,10 +610,10 @@ async def run_ingestion_cycle(categories: list[str] | None = None) -> dict:
         print(f"Redis: {e} (continuing without cache)")
 
     init_qdrant()
-    print(f"Qdrant: OK ({QDRANT_URL})")
-    print(f"API: {API_BASE}")
-    print(f"Embeddings: {EMBEDDING_MODEL} via {EMBEDDING_BASE_URL}")
-    print(f"API key present: {bool(OPENROUTER_API_KEY)}")
+    print(f"Qdrant: OK ({settings.QDRANT_URL})")
+    print(f"API: {settings.WIKI_API_BASE}")
+    print(f"Embeddings: {EMBEDDING_MODEL} via {settings.EMBEDDING_BASE_URL}")
+    print(f"API key present: {bool(settings.OPENROUTER_API_KEY)}")
     print(f"Sources: {len(sources)} (filtered by categories={categories})")
 
     for source in sources:

@@ -7,22 +7,23 @@ Usage:
 
 import asyncio, os, sys, time
 
-# Add project to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Override MAX_PAGES before importing
+# Override MAX_PAGES before importing (wiki_ingest reads it at import time)
 os.environ["MAX_PAGES"] = os.getenv("MAX_PAGES", "200")
 
 from ingestion import wiki_ingest
+from verse_monitor.config import settings
 
 async def main():
     print("=" * 60)
     print("BIG BATCH INGESTION — sc_chunks")
-    print(f"MAX_PAGES = {os.getenv('MAX_PAGES')}")
-    print(f"REDIS_URL = {os.getenv('REDIS_URL', 'not set')}")
-    print(f"QDRANT_URL = {os.getenv('QDRANT_URL', 'not set')}")
-    print(f"API_BASE = {os.getenv('API_BASE', wiki_ingest.API_BASE)}")
-    print(f"OPENROUTER_API_KEY present: {bool(os.getenv('OPENROUTER_API_KEY'))}")
+    print(f"MAX_PAGES = {wiki_ingest.MAX_PAGES}")
+    print(f"REDIS_URL = {settings.REDIS_URL}")
+    print(f"QDRANT_URL = {settings.QDRANT_URL}")
+    print(f"WIKI_API_BASE = {settings.WIKI_API_BASE}")
+    print(f"OPENROUTER_API_KEY present: {bool(settings.OPENROUTER_API_KEY)}")
     print("=" * 60)
     result = await wiki_ingest.run_ingestion_cycle()
     print(f"\nDone: {result}")

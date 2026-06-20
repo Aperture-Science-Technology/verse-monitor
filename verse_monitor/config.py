@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str = ""
     QDRANT_COLLECTION: str = "sc_events"
 
+    # Ingestion: API source + embeddings (OpenRouter-compatible)
+    WIKI_API_BASE: str = "https://api.star-citizen.wiki/api"
+    EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_API_KEY: str = ""
+
     # Discord webhooks (optionnels — si vide, les alertes sont skippées)
     DISCORD_WEBHOOK_CRITICAL: str = ""
     DISCORD_WEBHOOK_HIGH: str = ""
