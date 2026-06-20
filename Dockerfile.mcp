@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -e .
 COPY verse_mcp/ verse_mcp/
 COPY verse_monitor/ verse_monitor/
 COPY ingestion/ ingestion/
+COPY scripts/ scripts/
 
 # Non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
