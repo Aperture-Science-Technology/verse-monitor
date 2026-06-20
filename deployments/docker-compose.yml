@@ -1,14 +1,17 @@
 # ============================================================
-# verse-monitor/docker-compose.yml — HARDENED VERSION
+# verse-monitor/docker-compose.yml — Production
 # ============================================================
-# Mesures de sécurité :
-#   - no-new-privileges sur tous les conteneurs
-#   - read-only filesystem (où applicable)
-#   - drop de toutes les capabilities + whitelist minimal
-#   - limites mémoire et CPU
-#   - logging limité
-#   - security headers Traefik inline (HSTS, CSP, X-Frame-Options, etc.)
-#   - rate limiting Traefik inline
+# Services:
+#   - verse-monitor-mcp     : MCP Server (FastMCP, port 8000)
+#   - verse-monitor-worker  : Alert worker (scheduler)
+#   - verse-monitor-portal  : Webhook portal (FastAPI, port 8080)
+#   - redis-verse           : Redis 7 Alpine
+#   - qdrant                : Qdrant vector DB
+# ============================================================
+# Security: no-new-privileges, cap_drop ALL, read_only, tmpfs
+# TLS: Traefik with Let's Encrypt (certresolver=cf)
+# ============================================================
+# Deploy: cp to /home/glados/deployments/verse-monitor/ && docker compose up -d --build
 # ============================================================
 
 x-default-logging: &default-logging
@@ -44,7 +47,6 @@ services:
       timeout: 5s
       retries: 3
     logging: *default-logging
-    # Sécurité conteneur
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -62,18 +64,15 @@ services:
         reservations:
           memory: 256M
           cpus: "0.5"
-    # Traefik labels — security headers inline
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.verse-monitor-mcp.rule=Host(`verse-monitor.aperture-agency.org`) && PathPrefix(`/mcp`)"
       - "traefik.http.routers.verse-monitor-mcp.tls.certresolver=cf"
       - "traefik.http.services.verse-monitor-mcp.loadbalancer.server.port=8000"
       - "traefik.http.services.verse-monitor-mcp.loadbalancer.passhostheader=true"
-      # Rate limiting
       - "traefik.http.middlewares.mcp-ratelimit.ratelimit.average=20"
       - "traefik.http.middlewares.mcp-ratelimit.ratelimit.period=1s"
       - "traefik.http.middlewares.mcp-ratelimit.ratelimit.burst=50"
-      # Security headers
       - "traefik.http.middlewares.mcp-headers.headers.stsSeconds=31536000"
       - "traefik.http.middlewares.mcp-headers.headers.stsIncludeSubdomains=true"
       - "traefik.http.middlewares.mcp-headers.headers.stsPreload=true"
@@ -82,10 +81,9 @@ services:
       - "traefik.http.middlewares.mcp-headers.headers.browserXssFilter=true"
       - "traefik.http.middlewares.mcp-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
       - "traefik.http.middlewares.mcp-headers.headers.permissionsPolicy=camera=(), microphone=(), geolocation=(), payment=()"
-      - "traefik.http.middlewares.mcp-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+      - "traefik.http.middlewares.mcp-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
       - "traefik.http.middlewares.mcp-headers.headers.customResponseHeaders.Server="
       - "traefik.http.middlewares.mcp-headers.headers.customResponseHeaders.X-Powered-By="
-      # Appliquer les middlewares
       - "traefik.http.routers.verse-monitor-mcp.middlewares=mcp-ratelimit,mcp-headers"
 
   verse-monitor-worker:
@@ -102,11 +100,12 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
-    environment:
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis-verse:6379
-      - QDRANT_URL=http://qdrant:6333
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os; os.path.exists('/tmp/worker.ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     logging: *default-logging
-    # Sécurité conteneur — worker sans accès réseau externe direct
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -133,11 +132,11 @@ services:
       - verse-monitor-network
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis-verse:6379
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
     depends_on:
       redis-verse:
         condition: service_healthy
     logging: *default-logging
-    # Sécurité conteneur
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -155,17 +154,14 @@ services:
         reservations:
           memory: 64M
           cpus: "0.1"
-    # Traefik labels — security headers inline
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.verse-monitor-portal.rule=Host(`verse-monitor.aperture-agency.org`)"
       - "traefik.http.routers.verse-monitor-portal.tls.certresolver=cf"
       - "traefik.http.services.verse-monitor-portal.loadbalancer.server.port=8080"
-      # Rate limiting
       - "traefik.http.middlewares.portal-ratelimit.ratelimit.average=100"
       - "traefik.http.middlewares.portal-ratelimit.ratelimit.period=1s"
       - "traefik.http.middlewares.portal-ratelimit.ratelimit.burst=200"
-      # Security headers
       - "traefik.http.middlewares.portal-headers.headers.stsSeconds=31536000"
       - "traefik.http.middlewares.portal-headers.headers.stsIncludeSubdomains=true"
       - "traefik.http.middlewares.portal-headers.headers.stsPreload=true"
@@ -174,10 +170,9 @@ services:
       - "traefik.http.middlewares.portal-headers.headers.browserXssFilter=true"
       - "traefik.http.middlewares.portal-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
       - "traefik.http.middlewares.portal-headers.headers.permissionsPolicy=camera=(), microphone=(), geolocation=(), payment=()"
-      - "traefik.http.middlewares.portal-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+      - "traefik.http.middlewares.portal-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
       - "traefik.http.middlewares.portal-headers.headers.customResponseHeaders.Server="
       - "traefik.http.middlewares.portal-headers.headers.customResponseHeaders.X-Powered-By="
-      # Appliquer les middlewares
       - "traefik.http.routers.verse-monitor-portal.middlewares=portal-ratelimit,portal-headers"
 
   redis-verse:
@@ -186,7 +181,7 @@ services:
     restart: unless-stopped
     command: >
       redis-server
-      --requirepass "verse-monitor-2026"
+      --requirepass "${REDIS_PASSWORD}"
       --appendonly yes
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
@@ -204,7 +199,6 @@ services:
       timeout: 5s
       retries: 5
     logging: *default-logging
-    # Sécurité Redis
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -234,15 +228,12 @@ services:
     volumes:
       - qdrant-storage:/qdrant/storage
     logging: *default-logging
-    # Sécurité Qdrant
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     cap_add:
       - DAC_OVERRIDE
-    # Qdrant n'a pas besoin de read_only car il écrit dans /qdrant/snapshots/tmp
-    # qui est sur le volume persistant. Le read_only bloque les snapshots.
     tmpfs:
       - /tmp:size=64M,noexec,nosuid
     deploy:
@@ -258,7 +249,6 @@ networks:
   verse-monitor-network:
     name: verse-monitor-network
     driver: bridge
-    internal: false
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"
       com.docker.network.bridge.enable_ip_masquerade: "true"

@@ -1,18 +1,15 @@
 """Cache service (Redis)."""
 
-import os
 import redis.asyncio as redis
 from verse_mcp.constants import REDIS_TTL_SECONDS
+from verse_monitor.config import settings
 
 _redis_client: redis.Redis | None = None
 
 
 async def init_redis() -> None:
     global _redis_client
-    redis_url = os.getenv("REDIS_URL")
-    if not redis_url:
-        raise RuntimeError("REDIS_URL not set")
-    _redis_client = redis.from_url(redis_url, decode_responses=True)
+    _redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
     # Test connection
     await _redis_client.ping()
 

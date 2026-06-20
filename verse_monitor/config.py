@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str = ""
     QDRANT_COLLECTION: str = "sc_events"
 
+    # Ingestion: API source + embeddings (OpenRouter-compatible)
+    WIKI_API_BASE: str = "https://api.star-citizen.wiki/api"
+    EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_API_KEY: str = ""
+
     # Discord webhooks (optionnels — si vide, les alertes sont skippées)
     DISCORD_WEBHOOK_CRITICAL: str = ""
     DISCORD_WEBHOOK_HIGH: str = ""
@@ -46,6 +51,9 @@ class Settings(BaseSettings):
     HTTP_TIMEOUT: int = 30
     HTTP_RETRIES: int = 2
     HTTP_RETRY_BACKOFF: int = 5
+
+    # Ingestion tuning
+    MAX_PAGES: int = 50
 
 
 settings = Settings()
