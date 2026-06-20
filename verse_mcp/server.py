@@ -7,6 +7,7 @@ Stateless mode: FASTMCP_STATELESS_HTTP env var.
 
 import asyncio
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -32,11 +33,18 @@ from verse_mcp.tools.monitor import (
 )
 from verse_mcp.tools.sc_search_community import sc_search_community as _sc_search_community
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app):
     await init_redis()
     await init_qdrant()
+    # Also ensure the events collection exists (sc_events)
+    try:
+        await _events_store.ensure_collection()
+    except Exception as exc:
+        logger.warning("Could not ensure sc_events collection: %s", exc)
     yield
     await close_redis()
     await close_qdrant()
@@ -50,6 +58,12 @@ mcp = FastMCP(
 
 @mcp.custom_route("/healthz", methods=["GET"])
 async def healthz(request: Request) -> PlainTextResponse:
+    return PlainTextResponse("OK")
+
+
+@mcp.custom_route("/healthz-light", methods=["GET"])
+async def healthz_light(request: Request) -> PlainTextResponse:
+    """Lightweight health check for Traefik — no DB calls."""
     return PlainTextResponse("OK")
 
 

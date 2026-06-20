@@ -9,13 +9,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
 
 from verse_monitor.config import settings
 from verse_monitor.models import Priority
-from verse_monitor.storage.qdrant_store import get_events
+from verse_monitor.storage.qdrant_store import get_events, _default_store
+from verse_monitor.errors import error_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +54,9 @@ async def sc_get_events(
             return json.dumps({"events": [], "count": 0, "message": "Aucun événement trouvé"})
 
         return json.dumps({"events": events, "count": len(events)}, default=str, indent=2)
-    except Exception as e:
-        logger.error(f"Erreur sc_get_events: {e}")
-        return json.dumps({"error": str(e)})
+    except Exception as exc:
+        logger.error("Erreur sc_get_events: %s", exc)
+        return error_to_json(exc)
 
 
 async def sc_get_roadmap_diff(hours: int = 48) -> str:
@@ -95,9 +97,9 @@ async def sc_get_roadmap_diff(hours: int = 48) -> str:
             default=str,
             indent=2,
         )
-    except Exception as e:
-        logger.error(f"Erreur sc_get_roadmap_diff: {e}")
-        return json.dumps({"error": str(e)})
+    except Exception as exc:
+        logger.error("Erreur sc_get_roadmap_diff: %s", exc)
+        return error_to_json(exc)
 
 
 async def sc_get_dev_posts(hours: int = 72, limit: int = 15) -> str:
@@ -122,9 +124,9 @@ async def sc_get_dev_posts(hours: int = 72, limit: int = 15) -> str:
             default=str,
             indent=2,
         )
-    except Exception as e:
-        logger.error(f"Erreur sc_get_dev_posts: {e}")
-        return json.dumps({"error": str(e)})
+    except Exception as exc:
+        logger.error("Erreur sc_get_dev_posts: %s", exc)
+        return error_to_json(exc)
 
 
 async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
@@ -139,16 +141,13 @@ async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
         limit: Nombre max de résultats (défaut: 10)
     """
     try:
-        from verse_monitor.storage.qdrant_store import get_qdrant_client, ensure_collection
         from qdrant_client.http import models
 
-        client = get_qdrant_client()
-        await ensure_collection(client)
+        # Use the default store's client directly
+        client = _default_store._client
 
         # Extraire les keywords du titre
         keywords = event_title.lower().split()
-
-        from collections.abc import Sequence
 
         # Construire un filtre OR sur les keywords
         should_filters = [
@@ -165,7 +164,7 @@ async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
             for kw in keywords
         ]
 
-        result = await __import__("asyncio").to_thread(
+        result = await asyncio.to_thread(
             client.scroll,
             collection_name=settings.QDRANT_COLLECTION,
             scroll_filter=models.Filter(should=should_filters) if should_filters else None,  # type: ignore[arg-type]
@@ -181,6 +180,6 @@ async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
             default=str,
             indent=2,
         )
-    except Exception as e:
-        logger.error(f"Erreur sc_get_event_context: {e}")
-        return json.dumps({"error": str(e)})
+    except Exception as exc:
+        logger.error("Erreur sc_get_event_context: %s", exc)
+        return error_to_json(exc)

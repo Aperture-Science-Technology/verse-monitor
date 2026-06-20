@@ -22,6 +22,9 @@ async def main() -> None:
     from verse_monitor.workers.scheduler import build_scheduler
     from verse_monitor.workers.alert_worker import run_alert_worker
     from verse_monitor.workers.ingestion_scheduler import IngestionScheduler
+    from verse_monitor.monitoring.alerts import monitor_collections_loop
+    from verse_monitor.storage.qdrant_store import _default_store
+    from verse_mcp.services.retriever import _qdrant_client as _chunks_client
 
     r = get_redis()
     scheduler = build_scheduler(r)
@@ -29,6 +32,20 @@ async def main() -> None:
 
     ingestion_scheduler = IngestionScheduler(r, interval=settings.INGESTION_INTERVAL)
     await ingestion_scheduler.start()
+
+    # Start background collection monitoring (non-blocking)
+    monitor_task = asyncio.create_task(
+        monitor_collections_loop(
+            events_client=_default_store._client,
+            chunks_client=_chunks_client,
+            events_collection=settings.QDRANT_COLLECTION,
+            chunks_collection="sc_chunks",
+            expected_dimension=1536,
+            check_interval=60,
+            discord_webhook=settings.DISCORD_WEBHOOK_HIGH or None,
+        ),
+        name="collection-monitor",
+    )
 
     await run_alert_worker(r)
 
