@@ -402,7 +402,7 @@ async def generate_embedding(text: str) -> list[float]:
 # ---------------------------------------------------------------------------
 
 def init_qdrant():
-    """Initialize Qdrant client and ensure collection exists."""
+    """Initialize Qdrant client and ensure collection exists with correct dimension."""
     global qdrant_client
     import warnings
     from qdrant_client import QdrantClient
@@ -424,9 +424,27 @@ def init_qdrant():
                 distance=models.Distance.COSINE,
             ),
         )
-        print(f"Created collection '{VECTOR_COLLECTION_NAME}'")
+        print(f"Created collection '{VECTOR_COLLECTION_NAME}' (dim={EMBEDDING_DIMENSIONS})")
     else:
-        print(f"Collection '{VECTOR_COLLECTION_NAME}' already exists")
+        # Verify dimension — recreate if mismatch
+        info = qdrant_client.get_collection(VECTOR_COLLECTION_NAME)
+        dim = info.config.params.vectors.size
+        if dim != EMBEDDING_DIMENSIONS:
+            print(
+                f"WARNING: Collection '{VECTOR_COLLECTION_NAME}' has dim={dim}, "
+                f"expected {EMBEDDING_DIMENSIONS}. Recreating."
+            )
+            qdrant_client.delete_collection(VECTOR_COLLECTION_NAME)
+            qdrant_client.create_collection(
+                collection_name=VECTOR_COLLECTION_NAME,
+                vectors_config=models.VectorParams(
+                    size=EMBEDDING_DIMENSIONS,
+                    distance=models.Distance.COSINE,
+                ),
+            )
+            print(f"Recreated collection '{VECTOR_COLLECTION_NAME}' (dim={EMBEDDING_DIMENSIONS})")
+        else:
+            print(f"Collection '{VECTOR_COLLECTION_NAME}' already exists (dim={dim})")
 
 
 async def upsert_chunks(chunks: list[str], source: str, url: str, category: str, patch_version: str | None = None, source_modified_at: str | None = None):

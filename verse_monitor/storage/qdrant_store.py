@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 EMBEDDING_DIMENSIONS = 1536
 COLLECTION = settings.QDRANT_COLLECTION
 
+# Lock to ensure only one coroutine can recreate the collection at a time
+_ensure_lock = asyncio.Lock()
+
+# Redis flag prefix set when a collection is auto-recreated (triggers re-index)
+REDIS_RECREATED_PREFIX = "collection:recreated:"
+
 
 def build_embedding_text(event: SCEvent) -> str:
     diff_lines = "\n".join(f"  {k}: {v}" for k, v in event.diff.items())
@@ -40,29 +46,82 @@ class QdrantStore:
             api_key=settings.QDRANT_API_KEY or None,
         )
 
-    def ensure_collection(self) -> None:
-        existing = [c.name for c in self._client.get_collections().collections]
-        if COLLECTION in existing:
-            info = self._client.get_collection(COLLECTION)
-            dim = info.config.params.vectors.size
-            if dim != EMBEDDING_DIMENSIONS:
-                logger.warning(
-                    "Collection '%s' has dimension %d but expected %d. "
-                    "Please manually delete and recreate the collection to use real embeddings.",
-                    COLLECTION,
-                    dim,
-                    EMBEDDING_DIMENSIONS,
-                )
-            return
+    async def ensure_collection(self) -> None:
+        """Idempotent, atomic collection creation with dimension check.
 
-        self._client.create_collection(
-            collection_name=COLLECTION,
-            vectors_config=models.VectorParams(
-                size=EMBEDDING_DIMENSIONS,
-                distance=models.Distance.COSINE,
-            ),
-        )
-        logger.info("Created Qdrant collection '%s' (dim=%d)", COLLECTION, EMBEDDING_DIMENSIONS)
+        Uses asyncio.Lock to prevent concurrent recreate.
+        If the collection exists with wrong dimension, it is deleted
+        and recreated atomically, then a Redis flag is set so other
+        services know to trigger re-indexing.
+        """
+        async with _ensure_lock:
+            existing = await asyncio.to_thread(self._client.get_collections)
+            collection_names = [c.name for c in existing.collections]
+
+            if COLLECTION in collection_names:
+                info = await asyncio.to_thread(
+                    self._client.get_collection, COLLECTION
+                )
+                dim = info.config.params.vectors.size
+                if dim != EMBEDDING_DIMENSIONS:
+                    logger.warning(
+                        "Collection '%s' has dimension %d but expected %d. "
+                        "Deleting and recreating.",
+                        COLLECTION,
+                        dim,
+                        EMBEDDING_DIMENSIONS,
+                    )
+                    # Atomic delete + recreate
+                    await asyncio.to_thread(
+                        self._client.delete_collection, COLLECTION
+                    )
+                    await asyncio.to_thread(
+                        self._client.create_collection,
+                        collection_name=COLLECTION,
+                        vectors_config=models.VectorParams(
+                            size=EMBEDDING_DIMENSIONS,
+                            distance=models.Distance.COSINE,
+                        ),
+                    )
+                    logger.info(
+                        "Recreated Qdrant collection '%s' (dim=%d)",
+                        COLLECTION,
+                        EMBEDDING_DIMENSIONS,
+                    )
+                    # Signal re-index via Redis (best-effort)
+                    await self._signal_recreated()
+                return
+
+            # Collection doesn't exist — create it
+            await asyncio.to_thread(
+                self._client.create_collection,
+                collection_name=COLLECTION,
+                vectors_config=models.VectorParams(
+                    size=EMBEDDING_DIMENSIONS,
+                    distance=models.Distance.COSINE,
+                ),
+            )
+            logger.info(
+                "Created Qdrant collection '%s' (dim=%d)",
+                COLLECTION,
+                EMBEDDING_DIMENSIONS,
+            )
+
+    async def _signal_recreated(self) -> None:
+        """Set a Redis flag so ingestion_scheduler knows to re-index."""
+        try:
+            import redis.asyncio as redis_lib
+            r = redis_lib.from_url(settings.REDIS_URL)
+            await r.set(
+                f"{REDIS_RECREATED_PREFIX}{COLLECTION}",
+                "1",
+                ex=3600,  # 1h TTL — if not consumed, it expires
+            )
+            await r.close()
+        except Exception as exc:
+            logger.warning(
+                "Could not set Redis recreated flag: %s", exc
+            )
 
     async def store_event(self, event: SCEvent) -> None:
         text = build_embedding_text(event)
@@ -139,7 +198,9 @@ class QdrantStore:
         logger.debug("Deleted event %s from Qdrant", event_id)
 
     async def count(self) -> int:
-        result = await asyncio.to_thread(self._client.count, collection_name=COLLECTION, exact=True)
+        result = await asyncio.to_thread(
+            self._client.count, collection_name=COLLECTION, exact=True
+        )
         return result.count
 
 
@@ -150,7 +211,7 @@ _default_store = QdrantStore()
 
 async def ensure_collection() -> None:
     """Module-level wrapper for backward compatibility."""
-    _default_store.ensure_collection()
+    await _default_store.ensure_collection()
 
 
 async def store_event(event: SCEvent) -> None:
@@ -170,11 +231,13 @@ async def get_events(
     if event_type is not None:
         filters["type"] = event_type
     if priority_min is not None:
-        filters["priority"] = priority_min.value if isinstance(priority_min, Priority) else priority_min
+        filters["priority"] = (
+            priority_min.value if isinstance(priority_min, Priority) else priority_min
+        )
     if category is not None:
         filters["category"] = category
     return await _default_store.search(
-        query="event",  # generic query for filtered search
+        query="event",
         limit=limit,
         filters=filters if filters else None,
     )
