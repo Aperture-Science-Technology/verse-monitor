@@ -53,7 +53,11 @@ from ingestion.chunking import semantic_chunk_text
 # Pagination / operational tuning
 API_PAGE_LIMIT = 200  # max per page (API allows up to 200)
 API_TIMEOUT = 300.0   # seconds (galactapedia can be very slow)
+<<<<<<< HEAD
 MAX_PAGES = settings.MAX_PAGES
+=======
+MAX_PAGES = int(_env("MAX_PAGES", "50"))  # max pages per source (env override for big batches)
+>>>>>>> d5eeac3 (feat: MAX_PAGES env var for big batch ingestion + batch script)
 
 # Rate limiting
 RATE_LIMIT_DELAY = 0.2  # seconds between API calls
