@@ -17,6 +17,7 @@ class Chunk:
     source: str
     url: str
     patch_version: str | None = None
+    score: float = 0.0
 
 _qdrant_client: QdrantClient | None = None
 
@@ -98,32 +99,51 @@ async def close_qdrant() -> None:
         _qdrant_client = None
 
 
+# Seuils de confiance par défaut — cosinus ∈ [0, 1]
+# En dessous, le résultat est considéré comme hors-sujet forcé.
+DEFAULT_SCORE_THRESHOLD = 0.4
+
+
 async def search_chunks(
     embedding: list[float],
     top_k: int = 5,
     category: str | None = None,
-) -> list:
-    """Search Qdrant for similar chunks."""
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+) -> tuple[list, float]:
+    """Search Qdrant for similar chunks, filtrés par seuil de score.
+
+    Retourne (chunks_filtrés, max_score_vu).
+    chunks_filtrés peut être vide si aucun point ne dépasse le seuil.
+    Chaque Chunk a son .score renseigné.
+    """
     if not _qdrant_client:
         raise RuntimeError("Qdrant not initialized")
-    
+
     query_filter = None
     if category:
         query_filter = models.Filter(
             must=[models.FieldCondition(key="category", match=models.MatchValue(value=category))]
         )
-    
+
+    # Récupérer un peu plus de candidates que top_k pour compenser le filtrage
+    fetch_limit = max(top_k * 3, top_k + 5)
+
     response = await asyncio.to_thread(
         _qdrant_client.query_points,
         collection_name=VECTOR_COLLECTION_NAME,
         query=embedding,
-        limit=top_k,
+        limit=fetch_limit,
         query_filter=query_filter,
         with_payload=True,
+        with_vectors=False,
     )
 
     chunks = []
+    max_seen = 0.0
     for point in response.points:
+        max_seen = max(max_seen, point.score)
+        if point.score < score_threshold:
+            continue
         payload = point.payload
         chunks.append(
             Chunk(
@@ -131,6 +151,10 @@ async def search_chunks(
                 source=payload.get("source", ""),
                 url=payload.get("url", ""),
                 patch_version=payload.get("patch_version"),
+                score=point.score,
             )
         )
-    return chunks
+
+    # Trier par score décroissant et limiter à top_k
+    chunks.sort(key=lambda c: c.score, reverse=True)
+    return chunks[:top_k], max_seen
