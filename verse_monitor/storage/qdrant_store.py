@@ -197,6 +197,9 @@ class QdrantStore:
             "category": event.category,
             "diff": event.diff,
         }
+        if event.published_at is not None:
+            payload["published_at"] = event.published_at.isoformat()
+            payload["published_at_ts"] = event.published_at.timestamp()
 
         await asyncio.to_thread(
             self._client.upsert,
@@ -217,6 +220,7 @@ class QdrantStore:
         limit: int = 10,
         filters: dict[str, Any] | None = None,
         priority_values: list[str] | None = None,
+        since_ts: float | None = None,
     ) -> list[dict[str, Any]]:
         vector = await generate_embedding(query)
 
@@ -238,6 +242,12 @@ class QdrantStore:
                 )
             )
 
+        # Filtre temporel basé sur published_at_ts (bug #8)
+        # Fallback : les anciens points sans published_at_ts utilisent timestamp_ts
+        # On filtre en mémoire après retrieval car les events sont peu nombreux
+        # et le Range OR n'est pas natif.
+        filter_ts = since_ts
+
         qdrant_filter = models.Filter(must=conditions) if conditions else None
 
         results = await asyncio.to_thread(
@@ -249,10 +259,25 @@ class QdrantStore:
             with_payload=True,
         )
 
-        return [
+        raw = [
             {"score": hit.score, **hit.payload}
             for hit in results.points
         ]
+
+        # Filtre temporel basé sur published_at_ts (≠ date d'ingestion)
+        # Fallback : les anciens points sans published_at_ts utilisent timestamp_ts
+        # (bug #8 : "Jumptown 2.0" ne doit pas remonter dans "dernière semaine"
+        # juste parce qu'il a été ré-scrapé aujourd'hui).
+        if filter_ts is not None:
+            filtered = []
+            for ev in raw:
+                ev_ts = ev.get("published_at_ts") or ev.get("timestamp_ts")
+                if ev_ts is not None and ev_ts < filter_ts:
+                    continue
+                filtered.append(ev)
+            raw = filtered
+
+        return raw
 
     async def delete_event(self, event_id: str) -> None:
         await asyncio.to_thread(
@@ -294,6 +319,9 @@ async def get_events(
     """Module-level wrapper — uses QdrantStore.search with filters.
 
     priority_min: inclusive minimum priority (LOW < MEDIUM < HIGH < CRITICAL).
+    since_ts: filtre temporel basé sur published_at_ts (≠ ingestion timestamp)
+              pour éviter que d'anciens contenus ré-scrapés remontent
+              comme "récents" (bug #8).
     """
     # Build priority list: include all priorities >= priority_min
     _priority_order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
@@ -311,4 +339,5 @@ async def get_events(
             "category": category,
         },
         priority_values=priority_values,
+        since_ts=since_ts,
     )

@@ -52,6 +52,7 @@ class SCEvent(BaseModel):
     diff: dict[str, Any] = {}
     keywords: list[str] = []
     timestamp: datetime = datetime.now(timezone.utc)
+    published_at: datetime | None = None  # Date de publication réelle (≠ ingestion)
     content_hash: str = ""
     patch_version: str | None = None
     author: str | None = None

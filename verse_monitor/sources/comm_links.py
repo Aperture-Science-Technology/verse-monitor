@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 
 from verse_monitor.models import EventType, Priority, SCEvent
 from verse_monitor.sources.base import BaseSource
+from verse_monitor.sources.time_ago import parse_time_ago
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,7 @@ class CommLinksSource(BaseSource):
                     source=self.name,
                     title=article["title"],
                     url=article.get("url", ""),
+                    published_at=parse_time_ago(article.get("date", "")),
                     diff={
                         "category": article.get("category", ""),
                         "date": article.get("date", ""),
