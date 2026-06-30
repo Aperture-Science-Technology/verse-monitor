@@ -38,6 +38,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app):
+    # Check version qdrant-client dès le départ
+    from importlib.metadata import version as _pkg_version
+    _qd_version = _pkg_version('qdrant-client')
+    logger.info("qdrant-client version: %s", _qd_version)
+
     await init_redis()
     await init_qdrant()
     # Also ensure the events collection exists (sc_events)
@@ -45,6 +50,20 @@ async def lifespan(app):
         await _events_store.ensure_collection()
     except Exception as exc:
         logger.warning("Could not ensure sc_events collection: %s", exc)
+
+    # Log structuré de startup
+    try:
+        _redis_ok = getattr(_cache_svc, '_redis_client', None) is not None
+        _qdrant_ok = getattr(_retriever_svc, '_qdrant_client', None) is not None
+        logger.info(
+            "VERSE MCP startup: redis=%s qdrant=%s ready=%s",
+            "ok" if _redis_ok else "missing",
+            "ok" if _qdrant_ok else "missing",
+            _redis_ok and _qdrant_ok,
+        )
+    except Exception:
+        pass
+
     yield
     await close_redis()
     await close_qdrant()

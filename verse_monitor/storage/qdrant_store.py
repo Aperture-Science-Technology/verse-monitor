@@ -45,6 +45,12 @@ class QdrantStore:
             url=settings.QDRANT_URL,
             api_key=settings.QDRANT_API_KEY or None,
         )
+        # Early-fail explicite : .query_points (>=1.16) doit être présent
+        if not hasattr(self._client, 'query_points'):
+            raise RuntimeError(
+                "qdrant-client version incompatible : .query_points introuvable. "
+                ">=1.16 requis (API .search() supprimée)."
+            )
 
     async def ensure_collection(self) -> None:
         """Idempotent, atomic collection creation with dimension check.

@@ -70,10 +70,22 @@ async def _ensure_collection_with_dimension() -> None:
 
 async def init_qdrant() -> None:
     global _qdrant_client
+    import qdrant_client as _qd_mod
     _qdrant_client = QdrantClient(
         url=settings.QDRANT_URL,
         api_key=settings.QDRANT_API_KEY or None,
         timeout=QDRANT_TIMEOUT,
+    )
+    # Early-fail explicite : la méthode .query_points (>=1.16) doit être présente
+    if not hasattr(_qdrant_client, 'query_points'):
+        raise RuntimeError(
+            "qdrant-client version incompatible : .query_points introuvable. "
+            ">=1.16 requis (API .search() supprimée)."
+        )
+    logger.info(
+        "Qdrant client v%s initialisé (serveur: %s)",
+        getattr(_qd_mod, '__version__', '?'),
+        settings.QDRANT_URL,
     )
     # Ensure collection exists with correct dimension
     await _ensure_collection_with_dimension()
