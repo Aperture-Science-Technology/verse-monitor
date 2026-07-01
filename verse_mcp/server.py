@@ -18,6 +18,7 @@ from starlette.responses import JSONResponse, PlainTextResponse
 
 import verse_mcp.services.cache as _cache_svc
 import verse_mcp.services.retriever as _retriever_svc
+from verse_mcp.services.ready import set_ready, set_unready, is_ready
 from verse_mcp.constants import VECTOR_COLLECTION_NAME
 from verse_mcp.services.cache import init_redis, close_redis
 from verse_mcp.services.retriever import init_qdrant, close_qdrant
@@ -38,14 +39,38 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app):
+    # Check version qdrant-client dès le départ
+    from importlib.metadata import version as _pkg_version
+    _qd_version = _pkg_version('qdrant-client')
+    logger.info("qdrant-client version: %s", _qd_version)
+
+    # Init séquentielle avec fast-fail : si l'une lève, le serveur
+    # ne démarre jamais complètement (Tes无间→ pas de "Tool not found" fantôme).
     await init_redis()
     await init_qdrant()
-    # Also ensure the events collection exists (sc_events)
+
+    # Double-vérification ping (redondant avec init mais explicite)
+    assert _cache_svc._redis_client is not None, "Redis client should be initialized"
+    assert _retriever_svc._qdrant_client is not None, "Qdrant client should be initialized"
+    await _cache_svc._redis_client.ping()
+    await asyncio.to_thread(_retriever_svc._qdrant_client.get_collections)
+
+    # Ensure the events collection exists (sc_events)
     try:
         await _events_store.ensure_collection()
     except Exception as exc:
         logger.warning("Could not ensure sc_events collection: %s", exc)
+
+    # Ready → les tools peuvent être appelés
+    set_ready()
+    logger.info(
+        "VERSE MCP ready: redis ok, qdrant ok (v%s)",
+        _qd_version,
+    )
+
     yield
+
+    set_unready()
     await close_redis()
     await close_qdrant()
 
@@ -172,24 +197,32 @@ async def health(request: Request) -> JSONResponse:
 @mcp.tool()
 async def sc_ask(question: str, category: str | None = None) -> str:
     """Ask a question about Star Citizen. Returns relevant lore, ship info, and game mechanics from the knowledge base."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_ask(question, category=category)
 
 
 @mcp.tool()
 async def sc_get_ship_stats(ship_name: str) -> str:
     """Get detailed technical stats for a specific Star Citizen ship."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_get_ship_stats(ship_name)
 
 
 @mcp.tool()
 async def sc_get_guide(topic: str) -> str:
     """Get a step-by-step guide or tutorial for a specific Star Citizen topic."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_get_guide(topic)
 
 
 @mcp.tool()
 async def sc_search_lore(query: str) -> str:
     """Search the Star Citizen lore database (Galactapedia, Comm-Links) for specific terms or characters."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_search_lore(query)
 
 
@@ -204,24 +237,32 @@ async def sc_get_events(
     limit: int = 20,
 ) -> str:
     """Get recent events from all RSI sources (roadmap, devtracker, comm-links)."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_get_events(hours, priority_min, event_type, category, limit)
 
 
 @mcp.tool()
 async def sc_get_roadmap_diff(hours: int = 48) -> str:
     """Get recent roadmap changes grouped by type (delays, additions, releases, removals)."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_get_roadmap_diff(hours)
 
 
 @mcp.tool()
 async def sc_get_dev_posts(hours: int = 72, limit: int = 15) -> str:
     """Get recent Devtracker posts from Spectrum."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_get_dev_posts(hours, limit)
 
 
 @mcp.tool()
 async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
     """Get historical events related to a subject (keyword search, not semantic)."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_get_event_context(event_title, limit)
 
 
@@ -230,6 +271,8 @@ async def sc_get_event_context(event_title: str, limit: int = 10) -> str:
 @mcp.tool()
 async def sc_search_community(query: str, top_k: int = 5) -> str:
     """Search community discussions from r/starcitizen (Reddit posts and comments)."""
+    if not is_ready():
+        return "Service temporairement indisponible (initialisation en cours). Réessayez dans quelques secondes."
     return await _sc_search_community(query, top_k=top_k)
 
 

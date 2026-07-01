@@ -52,8 +52,14 @@ class Settings(BaseSettings):
     HTTP_RETRIES: int = 2
     HTTP_RETRY_BACKOFF: int = 5
 
-    # Ingestion tuning
+    # Flash info
     MAX_PAGES: int = 50
+
+    # LLM synthesize (sc_ask) — optionnel, désactivé par défaut
+    LLM_SYNTHESIZE: str = "false"
+    LLM_SYNTHESIZE_MODEL: str = "google/gemini-2.0-flash-001"
+    LLM_SYNTHESIZE_MAX_TOKENS: int = 200
+    LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
 
 
 settings = Settings()
